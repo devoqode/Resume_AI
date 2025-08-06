@@ -39,14 +39,19 @@ export class WhisperService {
         temperature: options?.temperature || 0,
       });
 
-      if (options?.responseFormat === 'json' || options?.responseFormat === 'verbose_json') {
-        return (response as any).text || '';
+      if (
+        options?.responseFormat === 'json' ||
+        options?.responseFormat === 'verbose_json'
+      ) {
+        return (response as { text: string }).text || '';
       }
-      
+
       return response as unknown as string;
     } catch (error) {
       console.error('Error in speech-to-text conversion:', error);
-      throw new Error(`STT conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `STT conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -98,7 +103,9 @@ export class WhisperService {
       return response as any;
     } catch (error) {
       console.error('Error in verbose speech-to-text conversion:', error);
-      throw new Error(`Verbose STT conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Verbose STT conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -130,14 +137,19 @@ export class WhisperService {
         temperature: options?.temperature || 0,
       });
 
-      if (options?.responseFormat === 'json' || options?.responseFormat === 'verbose_json') {
-        return (response as any).text || '';
+      if (
+        options?.responseFormat === 'json' ||
+        options?.responseFormat === 'verbose_json'
+      ) {
+        return (response as { text: string }).text || '';
       }
-      
+
       return response as unknown as string;
     } catch (error) {
       console.error('Error in audio translation:', error);
-      throw new Error(`Audio translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Audio translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -181,7 +193,10 @@ export class WhisperService {
       }
 
       const fileExtension = audioFilePath.split('.').pop()?.toLowerCase();
-      if (!fileExtension || !requirements.supportedFormats.includes(fileExtension)) {
+      if (
+        !fileExtension ||
+        !requirements.supportedFormats.includes(fileExtension)
+      ) {
         return {
           isValid: false,
           error: `Unsupported file format. Supported formats: ${requirements.supportedFormats.join(', ')}`,

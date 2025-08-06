@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import path from 'path';
 import fs from 'fs';
 import { config } from './config';
+import { validateEnvironment } from './utils/validateEnv';
 import prisma from './lib/prisma';
 import { createResumeRoutes } from './routes/resume.routes';
 import { createInterviewRoutes } from './routes/interview.routes';
@@ -14,6 +15,24 @@ import { authenticateToken, optionalAuth, generateToken } from './middleware/aut
 import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
+
+// Validate environment configuration
+const envValidation = validateEnvironment();
+
+if (!envValidation.isValid) {
+  console.error('❌ Environment validation failed:');
+  envValidation.errors.forEach(error => {
+    console.error(`  - ${error}`);
+  });
+  process.exit(1);
+}
+
+if (envValidation.warnings.length > 0) {
+  console.warn('⚠️  Environment warnings:');
+  envValidation.warnings.forEach(warning => {
+    console.warn(`  - ${warning}`);
+  });
+}
 
 // Create required directories
 const requiredDirs = [
@@ -204,8 +223,17 @@ app.post('/api/auth/login', async (req: any, res: any) => {
       });
     }
 
-    // In production, verify password hash here
-    // For testing, we'll accept any password
+    // TODO: Implement proper password verification
+    // For now, require a minimum password length
+    if (password.length < 6) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password',
+      });
+    }
+
+    // In a real application, verify the password hash here
+    // const isValidPassword = await bcrypt.compare(password, user.passwordHash);
 
     // Generate JWT token
     const token = generateToken(user.id, user.email, config.jwt.secret);
@@ -280,16 +308,16 @@ app.post('/api/auth/create-test-user', async (req: any, res: any) => {
 });
 
 // API Routes
-app.use('/api/resume', createResumeRoutes(config.openai.apiKey));
+app.use('/api/resume', createResumeRoutes(config.openai.apiKey!));
 app.use('/api/interview', createInterviewRoutes(
-  config.openai.apiKey,
-  config.elevenlabs.apiKey,
+  config.openai.apiKey!,
+  config.elevenlabs.apiKey!,
   config.elevenlabs.voiceId
 ));
 app.use('/api/voice', createVoiceRoutes(
-  config.elevenlabs.apiKey,
+  config.elevenlabs.apiKey!,
   config.elevenlabs.voiceId,
-  config.openai.apiKey
+  config.openai.apiKey!
 ));
 
 // Serve static files from uploads directory

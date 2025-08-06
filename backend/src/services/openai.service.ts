@@ -1,5 +1,10 @@
 import OpenAI from 'openai';
-import { ParsedResumeData, WorkExperience, InterviewQuestion, AIEvaluation } from '../types';
+import {
+  ParsedResumeData,
+  WorkExperience,
+  InterviewQuestion,
+  AIEvaluation,
+} from '../types';
 
 export class OpenAIService {
   private openai: OpenAI;
@@ -76,25 +81,31 @@ Only return the JSON object, no additional text.
         const parsedData = JSON.parse(content) as ParsedResumeData;
         return parsedData;
       } catch (parseError) {
-        throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}`);
+        throw new Error(
+          `Failed to parse OpenAI response as JSON: ${parseError}`
+        );
       }
     } catch (error) {
       console.error('Error parsing resume with OpenAI:', error);
-      throw new Error(`Resume parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Resume parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
    * Generate interview questions based on work experience
    */
-  async generateInterviewQuestions(workExperience: WorkExperience[]): Promise<InterviewQuestion[]> {
+  async generateInterviewQuestions(
+    workExperience: WorkExperience[]
+  ): Promise<InterviewQuestion[]> {
     try {
-      const experienceContext = workExperience.map(exp => ({
+      const experienceContext = workExperience.map((exp) => ({
         title: exp.title,
         company: exp.company,
         duration: exp.duration,
         description: exp.description,
-        skills: exp.skills
+        skills: exp.skills,
       }));
 
       const prompt = `
@@ -139,22 +150,31 @@ Only return the JSON array, no additional text.
 
       try {
         const questions = JSON.parse(content);
-        
+
         // Validate and format questions
-        return questions.map((q: any, index: number) => ({
-          id: '', // Will be set when saving to database
-          sessionId: '', // Will be set when creating session
-          questionText: q.questionText,
-          questionType: q.questionType || 'experience',
-          orderIndex: index + 1,
-          isRequired: q.isRequired !== false,
-        }));
+        return questions.map(
+          (
+            q: { questionText: string; questionType?: string },
+            index: number
+          ) => ({
+            id: '', // Will be set when saving to database
+            sessionId: '', // Will be set when creating session
+            questionText: q.questionText,
+            questionType: q.questionType || 'experience',
+            orderIndex: index + 1,
+            isRequired: true,
+          })
+        );
       } catch (parseError) {
-        throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}`);
+        throw new Error(
+          `Failed to parse OpenAI response as JSON: ${parseError}`
+        );
       }
     } catch (error) {
       console.error('Error generating interview questions with OpenAI:', error);
-      throw new Error(`Question generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Question generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -172,11 +192,11 @@ Only return the JSON array, no additional text.
         question,
         response,
         expectedSkills,
-        workExperience: workContext.map(exp => ({
+        workExperience: workContext.map((exp) => ({
           title: exp.title,
           company: exp.company,
-          skills: exp.skills
-        }))
+          skills: exp.skills,
+        })),
       };
 
       const prompt = `
@@ -227,11 +247,15 @@ Only return the JSON object, no additional text.
         const evaluation = JSON.parse(content) as AIEvaluation;
         return evaluation;
       } catch (parseError) {
-        throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}`);
+        throw new Error(
+          `Failed to parse OpenAI response as JSON: ${parseError}`
+        );
       }
     } catch (error) {
       console.error('Error evaluating response with OpenAI:', error);
-      throw new Error(`Response evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Response evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -245,7 +269,12 @@ Only return the JSON object, no additional text.
       evaluation: AIEvaluation;
     }>,
     candidateProfile: ParsedResumeData
-  ): Promise<{ overallScore: number; feedback: string; strengths: string[]; improvements: string[] }> {
+  ): Promise<{
+    overallScore: number;
+    feedback: string;
+    strengths: string[];
+    improvements: string[];
+  }> {
     try {
       const prompt = `
 You are an expert interview evaluator. Based on the following interview performance, provide comprehensive overall feedback.
@@ -289,11 +318,15 @@ Only return the JSON object, no additional text.
         const overallFeedback = JSON.parse(content);
         return overallFeedback;
       } catch (parseError) {
-        throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}`);
+        throw new Error(
+          `Failed to parse OpenAI response as JSON: ${parseError}`
+        );
       }
     } catch (error) {
       console.error('Error generating overall feedback with OpenAI:', error);
-      throw new Error(`Overall feedback generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Overall feedback generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 }

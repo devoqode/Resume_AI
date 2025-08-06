@@ -2,6 +2,8 @@ import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import fs from 'fs/promises';
 import path from 'path';
 
+// ElevenLabs service implementation
+
 export class ElevenLabsService {
   private client: ElevenLabsClient;
   private defaultVoiceId: string;
@@ -25,23 +27,26 @@ export class ElevenLabsService {
     }
   ): Promise<Buffer> {
     try {
-      const audioStream = await this.client.textToSpeech.convert(voiceId || this.defaultVoiceId, {
-        text: text,
-        modelId: 'eleven_multilingual_v2',
-        voiceSettings: {
-          stability: options?.stability ?? 0.5,
-          similarityBoost: options?.similarityBoost ?? 0.8,
-          style: options?.style ?? 0.0,
-          useSpeakerBoost: options?.useSpeakerBoost ?? true,
-        },
-      });
+      const audioStream = await this.client.textToSpeech.convert(
+        voiceId || this.defaultVoiceId,
+        {
+          text,
+          modelId: 'eleven_multilingual_v2',
+          voiceSettings: {
+            stability: options?.stability ?? 0.5,
+            similarityBoost: options?.similarityBoost ?? 0.8,
+            style: options?.style ?? 0.0,
+            useSpeakerBoost: options?.useSpeakerBoost ?? true,
+          },
+        }
+      );
 
       // Convert stream to buffer
       const chunks: Uint8Array[] = [];
       for await (const chunk of audioStream) {
         chunks.push(chunk);
       }
-      
+
       // Convert Uint8Array chunks to Buffer
       const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
       const buffer = Buffer.alloc(totalLength);
@@ -50,29 +55,37 @@ export class ElevenLabsService {
         buffer.set(chunk, offset);
         offset += chunk.length;
       }
-      
+
       return buffer;
     } catch (error) {
       console.error('Error in text-to-speech conversion:', error);
-      throw new Error(`TTS conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `TTS conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
    * Save audio buffer to file and return file path
    */
-  async saveAudioToFile(audioBuffer: Buffer, filename: string, outputDir: string = './uploads/audio'): Promise<string> {
+  async saveAudioToFile(
+    audioBuffer: Buffer,
+    filename: string,
+    outputDir: string = './uploads/audio'
+  ): Promise<string> {
     try {
       // Ensure output directory exists
       await fs.mkdir(outputDir, { recursive: true });
-      
+
       const filePath = path.join(outputDir, `${filename}.mp3`);
       await fs.writeFile(filePath, audioBuffer);
-      
+
       return filePath;
     } catch (error) {
       console.error('Error saving audio file:', error);
-      throw new Error(`Failed to save audio file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to save audio file: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -92,7 +105,11 @@ export class ElevenLabsService {
     }
   ): Promise<string> {
     const audioBuffer = await this.textToSpeech(text, voiceId, options);
-    return await this.saveAudioToFile(audioBuffer, filename, options?.outputDir);
+    return await this.saveAudioToFile(
+      audioBuffer,
+      filename,
+      options?.outputDir
+    );
   }
 
   /**
@@ -104,7 +121,9 @@ export class ElevenLabsService {
       return response.voices || [];
     } catch (error) {
       console.error('Error fetching voices:', error);
-      throw new Error(`Failed to fetch voices: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to fetch voices: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -117,7 +136,9 @@ export class ElevenLabsService {
       return response;
     } catch (error) {
       console.error('Error fetching voice details:', error);
-      throw new Error(`Failed to fetch voice details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to fetch voice details: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -126,16 +147,20 @@ export class ElevenLabsService {
    * Note: This is a premium feature that requires audio samples
    */
   async createCustomVoice(
-    name: string,
-    description: string,
-    audioFiles: string[]
+    _name: string,
+    _description: string,
+    _audioFiles: string[]
   ): Promise<string> {
     try {
       // Note: This method may need to be updated based on the actual ElevenLabs API
-      throw new Error('Custom voice creation not implemented - please check ElevenLabs API documentation');
+      throw new Error(
+        'Custom voice creation not implemented - please check ElevenLabs API documentation'
+      );
     } catch (error) {
       console.error('Error creating custom voice:', error);
-      throw new Error(`Failed to create custom voice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to create custom voice: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -143,11 +168,13 @@ export class ElevenLabsService {
    * Speech to text conversion using ElevenLabs (if available)
    * Note: ElevenLabs primarily focuses on TTS. For STT, you might want to use OpenAI Whisper or other services
    */
-  async speechToText(audioFilePath: string): Promise<string> {
+  async speechToText(_audioFilePath: string): Promise<string> {
     try {
       // ElevenLabs doesn't have native STT, so we'll use a placeholder
       // In a real implementation, you might use OpenAI Whisper API or other STT services
-      throw new Error('Speech-to-text not implemented with ElevenLabs. Consider using OpenAI Whisper API.');
+      throw new Error(
+        'Speech-to-text not implemented with ElevenLabs. Consider using OpenAI Whisper API.'
+      );
     } catch (error) {
       console.error('Error in speech-to-text conversion:', error);
       throw error;
@@ -163,7 +190,9 @@ export class ElevenLabsService {
       return response;
     } catch (error) {
       console.error('Error fetching user info:', error);
-      throw new Error(`Failed to fetch user info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to fetch user info: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -176,7 +205,9 @@ export class ElevenLabsService {
       return response;
     } catch (error) {
       console.error('Error fetching voice settings:', error);
-      throw new Error(`Failed to fetch voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to fetch voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -184,8 +215,8 @@ export class ElevenLabsService {
    * Update voice settings for a specific voice
    */
   async updateVoiceSettings(
-    voiceId: string,
-    settings: {
+    _voiceId: string,
+    _settings: {
       stability?: number;
       similarityBoost?: number;
       style?: number;
@@ -194,10 +225,14 @@ export class ElevenLabsService {
   ): Promise<void> {
     try {
       // Note: Voice settings editing may need to be implemented based on actual ElevenLabs API
-      throw new Error('Voice settings update not implemented - please check ElevenLabs API documentation');
+      throw new Error(
+        'Voice settings update not implemented - please check ElevenLabs API documentation'
+      );
     } catch (error) {
       console.error('Error updating voice settings:', error);
-      throw new Error(`Failed to update voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to update voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -210,7 +245,7 @@ export class ElevenLabsService {
     outputDir?: string
   ): Promise<Array<{ questionId: string; audioPath: string }>> {
     const results = [];
-    
+
     for (const question of questions) {
       try {
         const filename = `question_${question.id}`;
@@ -220,17 +255,20 @@ export class ElevenLabsService {
           voiceId,
           { outputDir }
         );
-        
+
         results.push({
           questionId: question.id,
           audioPath,
         });
       } catch (error) {
-        console.error(`Error generating audio for question ${question.id}:`, error);
+        console.error(
+          `Error generating audio for question ${question.id}:`,
+          error
+        );
         // Continue with other questions even if one fails
       }
     }
-    
+
     return results;
   }
 }

@@ -25,19 +25,45 @@ export interface Resume {
   id: string;
   userId: string;
   filename: string;
-  originalName: string;
-  uploadDate: string;
-  fileSize: number;
-  mimeType: string;
-  parsedData?: {
-    name?: string;
-    email?: string;
+  filePath: string;
+  originalText: string;
+  parsedData: ParsedResumeData;
+  uploadedAt: Date | string;
+}
+
+export interface ParsedResumeData {
+  personalInfo: {
+    name: string;
+    email: string;
     phone?: string;
-    experience?: string[];
-    skills?: string[];
-    education?: string[];
-    summary?: string;
+    address?: string;
+    linkedin?: string;
+    github?: string;
+    website?: string;
   };
+  workExperience: WorkExperience[];
+  education: Education[];
+  skills: string[];
+  summary?: string;
+}
+
+export interface WorkExperience {
+  title: string;
+  company: string;
+  duration: string;
+  location?: string;
+  description: string;
+  skills: string[];
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface Education {
+  degree: string;
+  institution: string;
+  graduationYear?: string;
+  gpa?: string;
+  relevantCoursework?: string[];
 }
 
 export interface InterviewSession {
@@ -45,39 +71,45 @@ export interface InterviewSession {
   userId: string;
   resumeId: string;
   questions: InterviewQuestion[];
-  currentQuestionIndex: number;
-  status: 'active' | 'completed' | 'cancelled';
-  startTime: string;
-  endTime?: string;
-  totalQuestions: number;
-  responses: InterviewResponse[];
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  startedAt?: Date | string;
+  completedAt?: Date | string;
   overallScore?: number;
   feedback?: string;
+  createdAt: Date | string;
 }
 
 export interface InterviewQuestion {
   id: string;
   sessionId: string;
   questionText: string;
-  questionIndex: number;
-  audioUrl?: string;
-  expectedPoints?: string[];
+  questionType: 'experience' | 'technical' | 'behavioral' | 'situational';
+  orderIndex: number;
+  response?: InterviewResponse;
+  isRequired: boolean;
 }
 
 export interface InterviewResponse {
   id: string;
   questionId: string;
-  sessionId: string;
+  responseText: string;
   audioFilePath?: string;
-  transcription: string;
-  evaluation?: {
-    score: number;
-    feedback: string;
-    truthfulness: number;
-    relevance: number;
-    completeness: number;
-  };
-  responseTime: string;
+  responseTimeMs: number;
+  score?: number;
+  feedback?: string;
+  aiEvaluation?: AIEvaluation;
+  createdAt: Date | string;
+}
+
+export interface AIEvaluation {
+  relevance: number; // 0-10
+  clarity: number; // 0-10
+  completeness: number; // 0-10
+  technicalAccuracy?: number; // 0-10
+  overallScore: number; // 0-10
+  strengths: string[];
+  improvements: string[];
+  detailedFeedback: string;
 }
 
 export interface Voice {
@@ -299,21 +331,21 @@ export const interviewAPI = {
     sessionId: string;
     questionId: string;
     audioFile?: File;
-    transcription: string;
+    responseText: string;
   }): Promise<ApiResponse<InterviewResponse>> {
     if (data.audioFile) {
       const formData = new FormData();
       formData.append('sessionId', data.sessionId);
       formData.append('questionId', data.questionId);
       formData.append('audio', data.audioFile);
-      formData.append('transcription', data.transcription);
+      formData.append('responseText', data.responseText);
       
       return apiClient.postMultipart<InterviewResponse>('/api/interview/response', formData);
     } else {
       return apiClient.post<InterviewResponse>('/api/interview/response', {
         sessionId: data.sessionId,
         questionId: data.questionId,
-        transcription: data.transcription,
+        responseText: data.responseText,
       });
     }
   },

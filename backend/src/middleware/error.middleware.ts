@@ -4,7 +4,7 @@ import multer from 'multer';
 interface ErrorResponse {
   success: false;
   error: string;
-  details?: any;
+  details?: unknown;
   timestamp: string;
   path: string;
 }
@@ -23,14 +23,14 @@ export class AppError extends Error {
 }
 
 export const errorHandler = (
-  error: Error | AppError | any,
+  error: Error | AppError | unknown,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   let statusCode = 500;
   let message = 'Internal server error';
-  let details: any = undefined;
+  let details: unknown = undefined;
 
   // Handle different types of errors
   if (error instanceof AppError) {
@@ -52,37 +52,37 @@ export const errorHandler = (
       default:
         message = error.message;
     }
-  } else if (error.name === 'ValidationError') {
+  } else if (error && typeof error === 'object' && 'name' in error && error.name === 'ValidationError') {
     statusCode = 400;
     message = 'Validation error';
-    details = error.details || error.message;
-  } else if (error.name === 'CastError') {
+    details = (error as any).details || (error as any).message;
+  } else if (error && typeof error === 'object' && 'name' in error && error.name === 'CastError') {
     statusCode = 400;
     message = 'Invalid data format';
-  } else if (error.code === 11000) {
+  } else if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
     statusCode = 400;
     message = 'Duplicate entry';
-  } else if (error.name === 'JsonWebTokenError') {
+  } else if (error && typeof error === 'object' && 'name' in error && error.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Invalid token';
-  } else if (error.name === 'TokenExpiredError') {
+  } else if (error && typeof error === 'object' && 'name' in error && error.name === 'TokenExpiredError') {
     statusCode = 401;
     message = 'Token expired';
-  } else if (error.code === 'ENOENT') {
+  } else if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
     statusCode = 404;
     message = 'File not found';
-  } else if (error.code === 'EACCES') {
+  } else if (error && typeof error === 'object' && 'code' in error && error.code === 'EACCES') {
     statusCode = 403;
     message = 'Permission denied';
-  } else if (error.message) {
-    message = error.message;
+  } else if (error && typeof error === 'object' && 'message' in error) {
+    message = (error as any).message;
   }
 
   // Log error for debugging (in production, you might want to use a proper logger)
   if (statusCode >= 500) {
     console.error('Server Error:', {
       error: message,
-      stack: error.stack,
+      stack: (error as any).stack,
       url: req.url,
       method: req.method,
       ip: req.ip,
@@ -102,17 +102,21 @@ export const errorHandler = (
   }
 
   // Add stack trace in development mode
-  if (process.env.NODE_ENV === 'development' && error.stack) {
+  if (process.env.NODE_ENV === 'development' && error && typeof error === 'object' && 'stack' in error) {
     errorResponse.details = {
-      ...errorResponse.details,
-      stack: error.stack,
+      ...(typeof errorResponse.details === 'object' ? errorResponse.details : {}),
+      stack: (error as any).stack,
     };
   }
 
   res.status(statusCode).json(errorResponse);
 };
 
-export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
+export const notFoundHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   const error = new AppError(`Route ${req.originalUrl} not found`, 404);
   next(error);
 };

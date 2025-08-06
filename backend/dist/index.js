@@ -53,7 +53,7 @@ app.use((0, helmet_1.default)({
 }));
 // CORS configuration
 app.use((0, cors_1.default)({
-    origin: config_1.config.nodeEnv === 'production' ? [config_1.config.frontendUrl] : true,
+    origin: config_1.config.nodeEnv === 'production' ? config_1.config.frontendUrl : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

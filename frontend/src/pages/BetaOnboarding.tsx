@@ -5,7 +5,6 @@ import FileUpload from "@/components/FileUpload";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
 import ExperienceCard from "@/components/ExperienceCard";
-import WorkStyleInterviewDialog from "@/components/WorkStyleInterviewDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

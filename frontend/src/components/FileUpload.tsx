@@ -32,9 +32,10 @@ export default function FileUpload({
   const handleFileSelect = async (file: File) => {
     // Validate file type
     const allowedTypes = acceptedFileTypes.split(',').map(type => type.trim());
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const nameParts = file.name.split('.');
+    const fileExtension = nameParts.length > 1 ? '.' + nameParts.pop()?.toLowerCase() : '';
     
-    if (!allowedTypes.includes(fileExtension)) {
+    if (!fileExtension || !allowedTypes.includes(fileExtension)) {
       toast({
         title: "Invalid file type",
         description: `Please upload ${acceptedFileTypes} files only`,

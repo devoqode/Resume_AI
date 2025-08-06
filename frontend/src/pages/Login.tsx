@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useApi";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Mic } from "lucide-react";
 
@@ -46,21 +44,6 @@ const Login = () => {
     });
   };
 
-  const handleTestLogin = () => {
-    const testCredentials = {
-      email: "test@example.com",
-      password: "password123",
-    };
-    
-    setFormData(testCredentials);
-    
-    // Auto-login with test credentials
-    login(testCredentials, {
-      onSuccess: () => {
-        navigate("/dashboard");
-      },
-    });
-  };
 
   return (
     <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
@@ -81,12 +64,6 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Test Mode Badge */}
-        <div className="flex justify-center">
-          <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
-            🧪 Development Mode
-          </Badge>
-        </div>
 
         {/* Login Form */}
         <Card className="p-6">
@@ -165,17 +142,6 @@ const Login = () => {
             </Button>
           </form>
 
-          <Separator className="my-4" />
-
-          {/* Test Login Button */}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleTestLogin}
-            className="w-full"
-          >
-            🧪 Fill Test Credentials
-          </Button>
         </Card>
 
         {/* Sign Up Link */}

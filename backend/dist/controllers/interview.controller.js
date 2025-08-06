@@ -1,20 +1,22 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.InterviewController = void 0;
 const uuid_1 = require("uuid");
-const database_1 = require("../models/database");
+const prisma_1 = __importDefault(require("../lib/prisma"));
 const openai_service_1 = require("../services/openai.service");
 const elevenlabs_service_1 = require("../services/elevenlabs.service");
 const whisper_service_1 = require("../services/whisper.service");
 class InterviewController {
     constructor(openaiApiKey, elevenLabsApiKey, elevenLabsVoiceId) {
         /**
-         * Start a new interview session
+         * Start new interview session
          */
         this.startInterview = async (req, res) => {
             try {
-                const { resumeId } = req.body;
-                const userId = req.userId || req.body.userId;
+                const { userId, resumeId } = req.body;
                 if (!userId || !resumeId) {
                     res.status(400).json({
                         success: false,
@@ -22,9 +24,13 @@ class InterviewController {
                     });
                     return;
                 }
-                const db = (0, database_1.getDatabase)();
-                // Get resume data
-                const resume = await db.get(`SELECT parsed_data FROM resumes WHERE id = ? AND user_id = ?`, [resumeId, userId]);
+                // Verify resume exists
+                const resume = await prisma_1.default.resume.findUnique({
+                    where: { id: resumeId },
+                    include: {
+                        user: true
+                    }
+                });
                 if (!resume) {
                     res.status(404).json({
                         success: false,
@@ -32,57 +38,58 @@ class InterviewController {
                     });
                     return;
                 }
-                const parsedData = JSON.parse(resume.parsed_data);
-                // Generate interview questions based on work experience
-                const questions = await this.openaiService.generateInterviewQuestions(parsedData.workExperience || []);
+                // Generate interview questions based on resume
+                const parsedData = resume.parsedData;
+                const questions = await this.openaiService.generateInterviewQuestions(parsedData.workExperience);
                 // Create interview session
                 const sessionId = (0, uuid_1.v4)();
-                await db.run(`INSERT INTO interview_sessions (id, user_id, resume_id, status, started_at, created_at)
-         VALUES (?, ?, ?, 'in_progress', datetime('now'), datetime('now'))`, [sessionId, userId, resumeId]);
-                // Save questions
+                const session = await prisma_1.default.interviewSession.create({
+                    data: {
+                        id: sessionId,
+                        userId: userId,
+                        resumeId: resumeId,
+                        status: 'pending',
+                        startedAt: new Date()
+                    }
+                });
+                // Create interview questions
+                const createdQuestions = [];
                 for (let i = 0; i < questions.length; i++) {
-                    const questionId = (0, uuid_1.v4)();
-                    questions[i].id = questionId;
-                    questions[i].sessionId = sessionId;
-                    await db.run(`INSERT INTO interview_questions (id, session_id, question_text, question_type, order_index, is_required, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`, [
-                        questionId,
-                        sessionId,
-                        questions[i].questionText,
-                        questions[i].questionType,
-                        questions[i].orderIndex,
-                        questions[i].isRequired ? 1 : 0,
-                    ]);
+                    const question = await prisma_1.default.interviewQuestion.create({
+                        data: {
+                            id: (0, uuid_1.v4)(),
+                            sessionId: sessionId,
+                            questionText: questions[i].questionText,
+                            questionType: questions[i].questionType || 'general',
+                            orderIndex: i,
+                            isRequired: questions[i].isRequired || true
+                        }
+                    });
+                    createdQuestions.push(question);
                 }
-                // Generate audio files for questions
-                const audioFiles = await this.elevenLabsService.generateInterviewAudio(questions.map(q => ({ id: q.id, text: q.questionText })), undefined, // Use default voice
-                `./uploads/audio/session_${sessionId}`);
                 res.status(201).json({
                     success: true,
                     data: {
-                        sessionId,
-                        questions: questions.map((q, index) => ({
-                            ...q,
-                            audioPath: audioFiles[index]?.audioPath,
-                        })),
-                        status: 'in_progress',
-                    },
+                        sessionId: session.id,
+                        questions: createdQuestions,
+                        totalQuestions: createdQuestions.length
+                    }
                 });
             }
             catch (error) {
-                console.error('Error starting interview:', error);
+                console.error('Start interview error:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to start interview',
+                    error: 'Failed to start interview session'
                 });
             }
         };
         /**
-         * Submit response to interview question
+         * Submit interview response
          */
         this.submitResponse = async (req, res) => {
             try {
-                const { sessionId, questionId, responseText, responseTimeMs } = req.body;
+                const { sessionId, questionId, responseText } = req.body;
                 const audioFile = req.file;
                 if (!sessionId || !questionId) {
                     res.status(400).json({
@@ -91,18 +98,13 @@ class InterviewController {
                     });
                     return;
                 }
-                const db = (0, database_1.getDatabase)();
-                // Verify session exists and is active
-                const session = await db.get(`SELECT user_id, resume_id, status FROM interview_sessions WHERE id = ?`, [sessionId]);
-                if (!session || session.status !== 'in_progress') {
-                    res.status(400).json({
-                        success: false,
-                        error: 'Invalid or inactive interview session'
-                    });
-                    return;
-                }
-                // Get question details
-                const question = await db.get(`SELECT question_text, question_type FROM interview_questions WHERE id = ?`, [questionId]);
+                // Verify session and question exist
+                const question = await prisma_1.default.interviewQuestion.findUnique({
+                    where: { id: questionId },
+                    include: {
+                        session: true
+                    }
+                });
                 if (!question) {
                     res.status(404).json({
                         success: false,
@@ -130,64 +132,79 @@ class InterviewController {
                 if (!finalResponseText || finalResponseText.trim().length === 0) {
                     res.status(400).json({
                         success: false,
-                        error: 'Response text is required (either provided or from audio transcription)'
+                        error: 'Response text is required (either provided or transcribed from audio)'
                     });
                     return;
                 }
                 // Get resume data for context
-                const resume = await db.get(`SELECT parsed_data FROM resumes WHERE id = ?`, [session.resume_id]);
-                const parsedData = JSON.parse(resume.parsed_data);
-                // Evaluate response with OpenAI
-                const evaluation = await this.openaiService.evaluateResponse(question.question_text, finalResponseText, parsedData.skills || [], parsedData.workExperience || []);
-                // Save response
-                const responseId = (0, uuid_1.v4)();
-                await db.run(`INSERT INTO interview_responses 
-         (id, question_id, response_text, audio_file_path, response_time_ms, score, feedback, ai_evaluation, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`, [
-                    responseId,
-                    questionId,
-                    finalResponseText,
-                    audioFilePath,
-                    responseTimeMs || 0,
-                    evaluation.overallScore,
-                    evaluation.detailedFeedback,
-                    JSON.stringify(evaluation),
-                ]);
-                // Get next question if available
-                const nextQuestion = await db.get(`SELECT iq.*, ir.id as response_id 
-         FROM interview_questions iq 
-         LEFT JOIN interview_responses ir ON iq.id = ir.question_id
-         WHERE iq.session_id = ? AND ir.id IS NULL 
-         ORDER BY iq.order_index ASC 
-         LIMIT 1`, [sessionId]);
+                const resume = await prisma_1.default.resume.findUnique({
+                    where: { id: question.session.resumeId }
+                });
+                const parsedData = resume?.parsedData || { workExperience: [] };
+                // Evaluate response using OpenAI
+                const evaluation = await this.openaiService.evaluateResponse(question.questionText, finalResponseText, [], parsedData.workExperience);
+                // Save response to database
+                const response = await prisma_1.default.interviewResponse.create({
+                    data: {
+                        id: (0, uuid_1.v4)(),
+                        questionId: questionId,
+                        responseText: finalResponseText,
+                        audioFilePath: audioFilePath,
+                        responseTimeMs: 0, // Could be calculated from frontend
+                        score: evaluation.overallScore,
+                        feedback: evaluation.detailedFeedback,
+                        aiEvaluation: evaluation
+                    }
+                });
+                // Check if this is the last question
+                const totalQuestions = await prisma_1.default.interviewQuestion.count({
+                    where: { sessionId: sessionId }
+                });
+                const answeredQuestions = await prisma_1.default.interviewResponse.count({
+                    where: {
+                        question: {
+                            sessionId: sessionId
+                        }
+                    }
+                });
+                let nextQuestion = null;
+                if (answeredQuestions < totalQuestions) {
+                    // Get next unanswered question
+                    const unansweredQuestion = await prisma_1.default.interviewQuestion.findFirst({
+                        where: {
+                            sessionId: sessionId,
+                            responses: {
+                                none: {}
+                            }
+                        },
+                        orderBy: { orderIndex: 'asc' }
+                    });
+                    nextQuestion = unansweredQuestion;
+                }
                 res.json({
                     success: true,
                     data: {
-                        evaluation,
-                        nextQuestion: nextQuestion ? {
-                            id: nextQuestion.id,
-                            questionText: nextQuestion.question_text,
-                            questionType: nextQuestion.question_type,
-                            orderIndex: nextQuestion.order_index,
-                        } : null,
-                        isComplete: !nextQuestion,
-                    },
+                        responseId: response.id,
+                        evaluation: evaluation,
+                        nextQuestion: nextQuestion,
+                        isLastQuestion: answeredQuestions >= totalQuestions
+                    }
                 });
             }
             catch (error) {
-                console.error('Error submitting response:', error);
+                console.error('Submit response error:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to submit response',
+                    error: 'Failed to submit response'
                 });
             }
         };
         /**
-         * Complete interview session and get final results
+         * Complete interview session
          */
         this.completeInterview = async (req, res) => {
             try {
-                const { sessionId } = req.params;
+                const sessionId = req.params.sessionId;
                 if (!sessionId) {
                     res.status(400).json({
                         success: false,
@@ -195,85 +212,74 @@ class InterviewController {
                     });
                     return;
                 }
-                const db = (0, database_1.getDatabase)();
-                // Get session with all questions and responses
-                const sessionData = await db.all(`
-        SELECT 
-          iq.question_text,
-          ir.response_text,
-          ir.ai_evaluation,
-          ir.score
-        FROM interview_questions iq
-        LEFT JOIN interview_responses ir ON iq.id = ir.question_id
-        WHERE iq.session_id = ?
-        ORDER BY iq.order_index ASC
-      `, [sessionId]);
-                if (sessionData.length === 0) {
-                    res.status(404).json({
-                        success: false,
-                        error: 'Interview session not found'
-                    });
-                    return;
-                }
-                // Check if all questions have responses
-                const unansweredQuestions = sessionData.filter(item => !item.response_text);
-                if (unansweredQuestions.length > 0) {
+                // Get all responses for the session
+                const responses = await prisma_1.default.interviewResponse.findMany({
+                    where: {
+                        question: {
+                            sessionId: sessionId
+                        }
+                    },
+                    include: {
+                        question: true
+                    }
+                });
+                if (responses.length === 0) {
                     res.status(400).json({
                         success: false,
-                        error: `${unansweredQuestions.length} questions remain unanswered`
+                        error: 'No responses found for this session'
                     });
                     return;
                 }
-                // Get resume data for overall feedback
-                const session = await db.get(`SELECT resume_id FROM interview_sessions WHERE id = ?`, [sessionId]);
-                const resume = await db.get(`SELECT parsed_data FROM resumes WHERE id = ?`, [session.resume_id]);
-                const parsedData = JSON.parse(resume.parsed_data);
-                // Prepare data for overall feedback generation
-                const questionResponses = sessionData.map(item => ({
-                    question: item.question_text,
-                    response: item.response_text,
-                    evaluation: JSON.parse(item.ai_evaluation),
-                }));
-                // Generate overall feedback
-                const overallFeedback = await this.openaiService.generateOverallFeedback(questionResponses, parsedData);
-                // Update session with completion data
-                await db.run(`UPDATE interview_sessions 
-         SET status = 'completed', completed_at = datetime('now'), overall_score = ?, feedback = ?
-         WHERE id = ?`, [overallFeedback.overallScore, overallFeedback.feedback, sessionId]);
-                // Prepare final results
-                const results = {
-                    sessionId,
-                    overallScore: overallFeedback.overallScore,
-                    questionResults: questionResponses.map(qr => ({
-                        question: qr.question,
-                        response: qr.response,
-                        score: qr.evaluation.overallScore,
-                        feedback: qr.evaluation.detailedFeedback,
-                    })),
-                    overallFeedback: overallFeedback.feedback,
-                    strengths: overallFeedback.strengths,
-                    improvementAreas: overallFeedback.improvements,
-                };
+                // Calculate overall score and generate overall feedback
+                const totalScore = responses.reduce((sum, response) => sum + (response.score || 0), 0);
+                const averageScore = totalScore / responses.length;
+                // Get resume data for context
+                const session = await prisma_1.default.interviewSession.findUnique({
+                    where: { id: sessionId },
+                    include: { resume: true }
+                });
+                const parsedData = session?.resume.parsedData || { workExperience: [] };
+                const overallFeedback = await this.openaiService.generateOverallFeedback(responses.map(r => ({
+                    question: r.question.questionText,
+                    response: r.responseText,
+                    evaluation: r.aiEvaluation
+                })), parsedData);
+                // Update session status
+                const updatedSession = await prisma_1.default.interviewSession.update({
+                    where: { id: sessionId },
+                    data: {
+                        status: 'completed',
+                        completedAt: new Date(),
+                        overallScore: averageScore,
+                        feedback: overallFeedback.feedback
+                    },
+                    include: {
+                        questions: {
+                            include: {
+                                responses: true
+                            }
+                        }
+                    }
+                });
                 res.json({
                     success: true,
-                    data: results,
+                    data: updatedSession
                 });
             }
             catch (error) {
-                console.error('Error completing interview:', error);
+                console.error('Complete interview error:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to complete interview',
+                    error: 'Failed to complete interview session'
                 });
             }
         };
         /**
          * Get interview session details
          */
-        this.getInterview = async (req, res) => {
+        this.getSession = async (req, res) => {
             try {
-                const { sessionId } = req.params;
-                const userId = req.userId;
+                const sessionId = req.params.sessionId;
                 if (!sessionId) {
                     res.status(400).json({
                         success: false,
@@ -281,9 +287,32 @@ class InterviewController {
                     });
                     return;
                 }
-                const db = (0, database_1.getDatabase)();
-                // Get session details
-                const session = await db.get(`SELECT * FROM interview_sessions WHERE id = ? ${userId ? 'AND user_id = ?' : ''}`, userId ? [sessionId, userId] : [sessionId]);
+                const session = await prisma_1.default.interviewSession.findUnique({
+                    where: { id: sessionId },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true
+                            }
+                        },
+                        resume: {
+                            select: {
+                                id: true,
+                                filename: true,
+                                parsedData: true
+                            }
+                        },
+                        questions: {
+                            include: {
+                                responses: true
+                            },
+                            orderBy: { orderIndex: 'asc' }
+                        }
+                    }
+                });
                 if (!session) {
                     res.status(404).json({
                         success: false,
@@ -291,64 +320,25 @@ class InterviewController {
                     });
                     return;
                 }
-                // Get questions and responses
-                const questionsWithResponses = await db.all(`
-        SELECT 
-          iq.*,
-          ir.id as response_id,
-          ir.response_text,
-          ir.score,
-          ir.feedback,
-          ir.ai_evaluation,
-          ir.created_at as response_created_at
-        FROM interview_questions iq
-        LEFT JOIN interview_responses ir ON iq.id = ir.question_id
-        WHERE iq.session_id = ?
-        ORDER BY iq.order_index ASC
-      `, [sessionId]);
                 res.json({
                     success: true,
-                    data: {
-                        session: {
-                            id: session.id,
-                            status: session.status,
-                            startedAt: session.started_at,
-                            completedAt: session.completed_at,
-                            overallScore: session.overall_score,
-                            feedback: session.feedback,
-                        },
-                        questions: questionsWithResponses.map(q => ({
-                            id: q.id,
-                            questionText: q.question_text,
-                            questionType: q.question_type,
-                            orderIndex: q.order_index,
-                            response: q.response_text ? {
-                                id: q.response_id,
-                                responseText: q.response_text,
-                                score: q.score,
-                                feedback: q.feedback,
-                                aiEvaluation: q.ai_evaluation ? JSON.parse(q.ai_evaluation) : null,
-                                createdAt: q.response_created_at,
-                            } : null,
-                        })),
-                    },
+                    data: session
                 });
             }
             catch (error) {
-                console.error('Error fetching interview:', error);
+                console.error('Get session error:', error);
                 res.status(500).json({
                     success: false,
-                    error: 'Failed to fetch interview details',
+                    error: 'Failed to fetch interview session'
                 });
             }
         };
         /**
-         * Get user's interview sessions
+         * Get all interview sessions for a user
          */
-        this.getInterviews = async (req, res) => {
+        this.getUserSessions = async (req, res) => {
             try {
                 const userId = req.userId || req.params.userId;
-                const { status, limit = 10, offset = 0 } = req.query;
                 if (!userId) {
                     res.status(400).json({
                         success: false,
@@ -356,61 +346,42 @@ class InterviewController {
                     });
                     return;
                 }
-                const db = (0, database_1.getDatabase)();
-                let query = `
-        SELECT 
-          is.*,
-          r.filename as resume_filename,
-          COUNT(iq.id) as total_questions,
-          COUNT(ir.id) as answered_questions
-        FROM interview_sessions is
-        LEFT JOIN resumes r ON is.resume_id = r.id
-        LEFT JOIN interview_questions iq ON is.id = iq.session_id
-        LEFT JOIN interview_responses ir ON iq.id = ir.question_id
-        WHERE is.user_id = ?
-      `;
-                const params = [userId];
-                if (status) {
-                    query += ` AND is.status = ?`;
-                    params.push(status);
-                }
-                query += ` GROUP BY is.id ORDER BY is.created_at DESC LIMIT ? OFFSET ?`;
-                params.push(parseInt(limit), parseInt(offset));
-                const interviews = await db.all(query, params);
+                const sessions = await prisma_1.default.interviewSession.findMany({
+                    where: { userId },
+                    include: {
+                        resume: {
+                            select: {
+                                id: true,
+                                filename: true
+                            }
+                        },
+                        _count: {
+                            select: {
+                                questions: true
+                            }
+                        }
+                    },
+                    orderBy: { createdAt: 'desc' }
+                });
                 res.json({
                     success: true,
-                    data: interviews.map(interview => ({
-                        id: interview.id,
-                        status: interview.status,
-                        startedAt: interview.started_at,
-                        completedAt: interview.completed_at,
-                        overallScore: interview.overall_score,
-                        resumeFilename: interview.resume_filename,
-                        progress: {
-                            totalQuestions: interview.total_questions,
-                            answeredQuestions: interview.answered_questions,
-                            completionPercentage: interview.total_questions > 0
-                                ? Math.round((interview.answered_questions / interview.total_questions) * 100)
-                                : 0,
-                        },
-                    })),
+                    data: sessions
                 });
             }
             catch (error) {
-                console.error('Error fetching interviews:', error);
+                console.error('Get user sessions error:', error);
                 res.status(500).json({
                     success: false,
-                    error: 'Failed to fetch interviews',
+                    error: 'Failed to fetch interview sessions'
                 });
             }
         };
         /**
          * Delete interview session
          */
-        this.deleteInterview = async (req, res) => {
+        this.deleteSession = async (req, res) => {
             try {
-                const { sessionId } = req.params;
-                const userId = req.userId;
+                const sessionId = req.params.sessionId;
                 if (!sessionId) {
                     res.status(400).json({
                         success: false,
@@ -418,9 +389,10 @@ class InterviewController {
                     });
                     return;
                 }
-                const db = (0, database_1.getDatabase)();
-                // Verify ownership
-                const session = await db.get(`SELECT id FROM interview_sessions WHERE id = ? ${userId ? 'AND user_id = ?' : ''}`, userId ? [sessionId, userId] : [sessionId]);
+                // Verify session exists
+                const session = await prisma_1.default.interviewSession.findUnique({
+                    where: { id: sessionId }
+                });
                 if (!session) {
                     res.status(404).json({
                         success: false,
@@ -428,18 +400,20 @@ class InterviewController {
                     });
                     return;
                 }
-                // Delete session (cascade will handle questions and responses)
-                await db.run(`DELETE FROM interview_sessions WHERE id = ?`, [sessionId]);
+                // Delete session (cascades to questions and responses)
+                await prisma_1.default.interviewSession.delete({
+                    where: { id: sessionId }
+                });
                 res.json({
                     success: true,
-                    message: 'Interview session deleted successfully',
+                    message: 'Interview session deleted successfully'
                 });
             }
             catch (error) {
-                console.error('Error deleting interview:', error);
+                console.error('Delete session error:', error);
                 res.status(500).json({
                     success: false,
-                    error: 'Failed to delete interview session',
+                    error: 'Failed to delete interview session'
                 });
             }
         };

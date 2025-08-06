@@ -75,7 +75,7 @@ export default function AIInterviewDialog({
     isSupported: speechSupported
   } = useRealTimeTranscript();
 
-  // Timer effect
+  // Timer effect with cleanup
   useEffect(() => {
     if (stage === 'recording') {
       timerRef.current = setInterval(() => {
@@ -84,17 +84,19 @@ export default function AIInterviewDialog({
     } else {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = undefined;
       }
     }
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = undefined;
       }
     };
   }, [stage]);
 
-  // Audio playback handling
+  // Audio playback handling with proper cleanup
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -105,18 +107,53 @@ export default function AIInterviewDialog({
 
     const handleCanPlay = () => {
       if (audioPlaying) {
-        audio.play();
+        audio.play().catch(console.error);
       }
+    };
+
+    const handleError = () => {
+      setAudioPlaying(false);
+      console.error('Audio playback error');
     };
 
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('error', handleError);
 
     return () => {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('error', handleError);
     };
   }, [audioPlaying]);
+
+  // Cleanup effect when component unmounts or dialog closes
+  useEffect(() => {
+    return () => {
+      // Clear timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = undefined;
+      }
+      
+      // Stop listening
+      if (isListening) {
+        stopListening();
+      }
+
+      // Clean up audio URL to prevent memory leaks
+      if (currentAudioUrl) {
+        URL.revokeObjectURL(currentAudioUrl);
+      }
+
+      // Pause audio
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, [currentAudioUrl, isListening, stopListening]);
 
   // Format time display
   const formatTime = (seconds: number): string => {

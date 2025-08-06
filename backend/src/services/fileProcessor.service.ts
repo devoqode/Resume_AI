@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
-import * as docx from 'docx';
 
 export class FileProcessorService {
   /**
@@ -23,7 +22,9 @@ export class FileProcessorService {
       }
     } catch (error) {
       console.error(`Error extracting text from file ${filePath}:`, error);
-      throw new Error(`Failed to extract text: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to extract text: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -36,7 +37,9 @@ export class FileProcessorService {
       const pdfData = await pdf(dataBuffer);
       return pdfData.text;
     } catch (error) {
-      throw new Error(`PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -48,14 +51,19 @@ export class FileProcessorService {
       const result = await mammoth.extractRawText({ path: filePath });
       return result.value;
     } catch (error) {
-      throw new Error(`DOCX extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `DOCX extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
    * Validate file format and size
    */
-  validateFile(filePath: string, maxSizeBytes: number = 10 * 1024 * 1024): {
+  validateFile(
+    filePath: string,
+    maxSizeBytes: number = 10 * 1024 * 1024
+  ): {
     isValid: boolean;
     error?: string;
     fileSize?: number;
@@ -213,7 +221,11 @@ export class FileProcessorService {
     artifactPatterns.forEach((pattern, index) => {
       const matches = text.match(pattern);
       if (matches && matches.length > 3) {
-        const artifactTypes = ['Special characters', 'Repeated characters', 'Excessive whitespace'];
+        const artifactTypes = [
+          'Special characters',
+          'Repeated characters',
+          'Excessive whitespace',
+        ];
         issues.push(`Multiple ${artifactTypes[index]} detected`);
         score -= 15;
       }
@@ -228,7 +240,9 @@ export class FileProcessorService {
       /skills/i,
     ];
 
-    const structureMatches = structurePatterns.filter(pattern => pattern.test(text)).length;
+    const structureMatches = structurePatterns.filter((pattern) =>
+      pattern.test(text)
+    ).length;
     if (structureMatches < 2) {
       issues.push('Limited structured content detected');
       score -= 20;

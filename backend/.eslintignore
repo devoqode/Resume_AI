@@ -1,0 +1,7 @@
+node_modules/
+dist/
+uploads/
+prisma/migrations/
+*.js
+*.d.ts
+test_tts.mp3

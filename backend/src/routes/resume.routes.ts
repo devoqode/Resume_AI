@@ -5,20 +5,32 @@ import { ResumeController } from '../controllers/resume.controller';
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
-  destination: (req: any, file: any, cb: any) => {
+  destination: (
+    req: Express.Request,
+    file: Express.Multer.File,
+    cb: (error: Error | null, destination: string) => void
+  ) => {
     cb(null, './uploads/resumes/');
   },
-  filename: (req: any, file: any, cb: any) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+  filename: (
+    req: Express.Request,
+    file: Express.Multer.File,
+    cb: (error: Error | null, filename: string) => void
+  ) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const extension = path.extname(file.originalname);
     cb(null, `resume-${uniqueSuffix}${extension}`);
   },
 });
 
-const fileFilter = (req: any, file: any, cb: any) => {
+const fileFilter = (
+  req: Express.Request,
+  file: Express.Multer.File,
+  cb: (error: Error | null, acceptFile?: boolean) => void
+) => {
   const allowedExtensions = ['.pdf', '.doc', '.docx'];
   const fileExtension = path.extname(file.originalname).toLowerCase();
-  
+
   if (allowedExtensions.includes(fileExtension)) {
     cb(null, true);
   } else {
@@ -39,7 +51,11 @@ export const createResumeRoutes = (openaiApiKey: string) => {
   const resumeController = new ResumeController(openaiApiKey);
 
   // Upload and parse resume
-  router.post('/upload', upload.single('resume'), resumeController.uploadResume);
+  router.post(
+    '/upload',
+    upload.single('resume'),
+    resumeController.uploadResume
+  );
 
   // Get user's resumes
   router.get('/user/:userId', resumeController.getResumes);

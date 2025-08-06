@@ -1,17 +1,14 @@
 import { Request } from 'express';
-import { JwtPayload } from 'jsonwebtoken';
 
 // Import Multer types for file uploads
 import 'multer';
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
-  body: any;
-  params: any;
-  query: any;
   file?: Express.Multer.File;
-  files?: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
-  headers: any;
+  files?:
+    | { [fieldname: string]: Express.Multer.File[] }
+    | Express.Multer.File[];
 }
 
 export interface User {

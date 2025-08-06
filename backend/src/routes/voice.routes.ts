@@ -5,25 +5,53 @@ import { VoiceController } from '../controllers/voice.controller';
 
 // Multer configuration for audio uploads (STT)
 const sttStorage = multer.diskStorage({
-  destination: (req: any, file: any, cb: any) => {
+  destination: (
+    req: Express.Request,
+    file: Express.Multer.File,
+    cb: (error: Error | null, destination: string) => void
+  ) => {
     cb(null, './uploads/audio/stt/');
   },
-  filename: (req: any, file: any, cb: any) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+  filename: (
+    req: Express.Request,
+    file: Express.Multer.File,
+    cb: (error: Error | null, filename: string) => void
+  ) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const extension = path.extname(file.originalname) || '.mp3';
     cb(null, `stt-${uniqueSuffix}${extension}`);
   },
 });
 
-const audioFileFilter = (req: any, file: any, cb: any) => {
+const audioFileFilter = (
+  req: Express.Request,
+  file: Express.Multer.File,
+  cb: (error: Error | null, acceptFile?: boolean) => void
+) => {
   // Whisper supported formats
-  const allowedExtensions = ['.mp3', '.mp4', '.mpeg', '.mpga', '.m4a', '.wav', '.webm'];
+  const allowedExtensions = [
+    '.mp3',
+    '.mp4',
+    '.mpeg',
+    '.mpga',
+    '.m4a',
+    '.wav',
+    '.webm',
+  ];
   const fileExtension = path.extname(file.originalname).toLowerCase();
-  
-  if (allowedExtensions.includes(fileExtension) || file.mimetype.startsWith('audio/')) {
+
+  if (
+    allowedExtensions.includes(fileExtension) ||
+    file.mimetype.startsWith('audio/')
+  ) {
     cb(null, true);
   } else {
-    cb(new Error('Unsupported audio format. Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm'), false);
+    cb(
+      new Error(
+        'Unsupported audio format. Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm'
+      ),
+      false
+    );
   }
 };
 
@@ -49,23 +77,49 @@ export const createVoiceRoutes = (
 
   // Text-to-Speech routes
   router.post('/tts', voiceController.textToSpeech.bind(voiceController));
-  router.post('/tts/file', voiceController.textToSpeechFile.bind(voiceController));
+  router.post(
+    '/tts/file',
+    voiceController.textToSpeechFile.bind(voiceController)
+  );
 
   // Speech-to-Text routes
-  router.post('/stt', sttUpload.single('audio'), voiceController.speechToText.bind(voiceController));
-  router.post('/stt/verbose', sttUpload.single('audio'), voiceController.speechToTextVerbose.bind(voiceController));
+  router.post(
+    '/stt',
+    sttUpload.single('audio'),
+    voiceController.speechToText.bind(voiceController)
+  );
+  router.post(
+    '/stt/verbose',
+    sttUpload.single('audio'),
+    voiceController.speechToTextVerbose.bind(voiceController)
+  );
 
   // Voice management routes
   router.get('/voices', voiceController.getVoices.bind(voiceController));
-  router.get('/voices/:voiceId', voiceController.getVoice.bind(voiceController));
-  router.get('/voices/:voiceId/settings', voiceController.getVoiceSettings.bind(voiceController));
-  router.put('/voices/:voiceId/settings', voiceController.updateVoiceSettings.bind(voiceController));
+  router.get(
+    '/voices/:voiceId',
+    voiceController.getVoice.bind(voiceController)
+  );
+  router.get(
+    '/voices/:voiceId/settings',
+    voiceController.getVoiceSettings.bind(voiceController)
+  );
+  router.put(
+    '/voices/:voiceId/settings',
+    voiceController.updateVoiceSettings.bind(voiceController)
+  );
 
   // Serve audio files
-  router.get('/audio/:filename', voiceController.serveAudioFile.bind(voiceController));
+  router.get(
+    '/audio/:filename',
+    voiceController.serveAudioFile.bind(voiceController)
+  );
 
   // Get audio requirements and limits
-  router.get('/requirements', voiceController.getAudioRequirements.bind(voiceController));
+  router.get(
+    '/requirements',
+    voiceController.getAudioRequirements.bind(voiceController)
+  );
 
   // Get ElevenLabs user info and quota
   router.get('/user/info', voiceController.getUserInfo.bind(voiceController));

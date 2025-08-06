@@ -10,12 +10,12 @@ interface JWTPayload extends JwtPayload {
 export const authenticateToken = (jwtSecret: string) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && typeof authHeader === 'string' ? authHeader.split(' ')[1] : null;
 
     if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Access token is required' 
+      return res.status(401).json({
+        success: false,
+        error: 'Access token is required',
       });
     }
 
@@ -25,19 +25,19 @@ export const authenticateToken = (jwtSecret: string) => {
       next();
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        return res.status(401).json({ 
-          success: false, 
-          error: 'Token has expired' 
+        return res.status(401).json({
+          success: false,
+          error: 'Token has expired',
         });
       } else if (error instanceof jwt.JsonWebTokenError) {
-        return res.status(403).json({ 
-          success: false, 
-          error: 'Invalid token' 
+        return res.status(403).json({
+          success: false,
+          error: 'Invalid token',
         });
       } else {
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Token verification failed' 
+        return res.status(500).json({
+          success: false,
+          error: 'Token verification failed',
         });
       }
     }
@@ -47,7 +47,7 @@ export const authenticateToken = (jwtSecret: string) => {
 export const optionalAuth = (jwtSecret: string) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = authHeader && typeof authHeader === 'string' ? authHeader.split(' ')[1] : null;
 
     if (!token) {
       // No token provided, continue without authentication
@@ -67,15 +67,23 @@ export const optionalAuth = (jwtSecret: string) => {
   };
 };
 
-export const generateToken = (userId: string, email: string, jwtSecret: string, expiresIn: string = '7d'): string => {
+export const generateToken = (
+  userId: string,
+  email: string,
+  jwtSecret: string,
+  expiresIn: string = '7d'
+): string => {
   try {
-    return jwt.sign({ userId, email }, jwtSecret, { expiresIn } as any);
+    return jwt.sign({ userId, email }, jwtSecret, { expiresIn } as jwt.SignOptions);
   } catch (error) {
     throw new Error(`Token generation failed: ${error}`);
   }
 };
 
-export const verifyToken = (token: string, jwtSecret: string): JWTPayload | null => {
+export const verifyToken = (
+  token: string,
+  jwtSecret: string
+): JWTPayload | null => {
   try {
     return jwt.verify(token, jwtSecret) as JWTPayload;
   } catch (error) {

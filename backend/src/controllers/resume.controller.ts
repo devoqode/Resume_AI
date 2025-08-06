@@ -1,10 +1,10 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import { getDatabase } from '../models/database';
+import fs from 'fs';
+import prisma from '../lib/prisma';
 import { OpenAIService } from '../services/openai.service';
 import { FileProcessorService } from '../services/fileProcessor.service';
-import { ParsedResumeData, AuthenticatedRequest } from '../types';
+import { AuthenticatedRequest } from '../types';
 
 export class ResumeController {
   private openaiService: OpenAIService;
@@ -18,70 +18,81 @@ export class ResumeController {
   /**
    * Upload and parse resume
    */
-  uploadResume = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  uploadResume = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       if (!req.file) {
-        res.status(400).json({ success: false, error: 'No file uploaded' });
+        res.status(400).json({
+          success: false,
+          error: 'No file uploaded',
+        });
         return;
       }
 
       const userId = req.userId || req.body.userId;
       if (!userId) {
-        res.status(400).json({ success: false, error: 'User ID is required' });
-        return;
-      }
-
-      const db = getDatabase();
-      const resumeId = uuidv4();
-      const filePath = req.file.path;
-      const filename = req.file.originalname;
-
-      // Process the resume file
-      const fileProcessing = await this.fileProcessor.processResumeFile(filePath);
-      
-      // Estimate extraction quality
-      const qualityEstimate = this.fileProcessor.estimateExtractionQuality(fileProcessing.cleanedText);
-      
-      if (qualityEstimate.quality === 'poor') {
         res.status(400).json({
           success: false,
-          error: 'Poor text extraction quality',
-          details: qualityEstimate.issues,
+          error: 'User ID is required',
         });
         return;
       }
 
-      // Parse with OpenAI
-      const parsedData = await this.openaiService.parseResumeText(fileProcessing.cleanedText);
+      const filePath = req.file.path;
+      const filename = req.file.originalname;
 
-      // Save to database
-      await db.run(
-        `INSERT INTO resumes (id, user_id, filename, file_path, original_text, parsed_data, uploaded_at)
-         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
-        [
-          resumeId,
-          userId,
-          filename,
-          filePath,
-          fileProcessing.originalText,
-          JSON.stringify(parsedData),
-        ]
-      );
+      // Process the uploaded file
+      try {
+        const extractedText =
+          await this.fileProcessor.extractTextFromFile(filePath);
 
-      res.status(201).json({
-        success: true,
-        data: {
-          resumeId,
-          parsedData,
-          qualityEstimate,
-          metadata: fileProcessing.metadata,
-        },
-      });
+        if (!extractedText || extractedText.trim().length === 0) {
+          res.status(400).json({
+            success: false,
+            error: 'Could not extract text from the uploaded file',
+          });
+          return;
+        }
+
+        // Parse the resume using OpenAI
+        const parsedData =
+          await this.openaiService.parseResumeText(extractedText);
+
+        // Save resume to database using Prisma
+        const resume = await prisma.resume.create({
+          data: {
+            id: uuidv4(),
+            userId: userId as string,
+            filename,
+            filePath,
+            originalText: extractedText,
+            parsedData: parsedData as any,
+          },
+        });
+
+        res.status(201).json({
+          success: true,
+          data: {
+            id: resume.id,
+            filename: resume.filename,
+            uploadedAt: resume.uploadedAt,
+            parsedData: resume.parsedData,
+          },
+        });
+      } catch (processingError) {
+        console.error('Resume processing error:', processingError);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to process resume file',
+        });
+      }
     } catch (error) {
-      console.error('Error uploading resume:', error);
+      console.error('Resume upload error:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Resume upload failed',
+        error: 'Failed to upload resume',
       });
     }
   };
@@ -89,7 +100,10 @@ export class ResumeController {
   /**
    * Get user's resumes
    */
-  getResumes = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getResumes = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const userId = req.userId || req.params.userId;
       if (!userId) {
@@ -97,25 +111,23 @@ export class ResumeController {
         return;
       }
 
-      const db = getDatabase();
-      const resumes = await db.all(
-        `SELECT id, filename, uploaded_at, parsed_data FROM resumes WHERE user_id = ? ORDER BY uploaded_at DESC`,
-        [userId]
-      );
-
-      const formattedResumes = resumes.map((resume: any) => ({
-        id: resume.id,
-        filename: resume.filename,
-        uploadedAt: resume.uploaded_at,
-        parsedData: JSON.parse(resume.parsed_data),
-      }));
+      const resumes = await prisma.resume.findMany({
+        where: { userId },
+        orderBy: { uploadedAt: 'desc' },
+        select: {
+          id: true,
+          filename: true,
+          uploadedAt: true,
+          parsedData: true,
+        },
+      });
 
       res.json({
         success: true,
-        data: formattedResumes,
+        data: resumes,
       });
     } catch (error) {
-      console.error('Error fetching resumes:', error);
+      console.error('Get resumes error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch resumes',
@@ -124,41 +136,49 @@ export class ResumeController {
   };
 
   /**
-   * Get specific resume details
+   * Get single resume
    */
-  getResume = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getResume = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
-      const { resumeId } = req.params;
-      const userId = req.userId;
-
+      const resumeId = req.params.resumeId;
       if (!resumeId) {
-        res.status(400).json({ success: false, error: 'Resume ID is required' });
+        res
+          .status(400)
+          .json({ success: false, error: 'Resume ID is required' });
         return;
       }
 
-      const db = getDatabase();
-      const resume = await db.get(
-        `SELECT * FROM resumes WHERE id = ? ${userId ? 'AND user_id = ?' : ''}`,
-        userId ? [resumeId, userId] : [resumeId]
-      );
+      const resume = await prisma.resume.findUnique({
+        where: { id: resumeId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      });
 
       if (!resume) {
-        res.status(404).json({ success: false, error: 'Resume not found' });
+        res.status(404).json({
+          success: false,
+          error: 'Resume not found',
+        });
         return;
       }
 
       res.json({
         success: true,
-        data: {
-          id: resume.id,
-          filename: resume.filename,
-          uploadedAt: resume.uploaded_at,
-          parsedData: JSON.parse(resume.parsed_data),
-          originalText: resume.original_text,
-        },
+        data: resume,
       });
     } catch (error) {
-      console.error('Error fetching resume:', error);
+      console.error('Get resume error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch resume',
@@ -169,48 +189,52 @@ export class ResumeController {
   /**
    * Delete resume
    */
-  deleteResume = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  deleteResume = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
-      const { resumeId } = req.params;
-      const userId = req.userId;
-
+      const resumeId = req.params.resumeId;
       if (!resumeId) {
-        res.status(400).json({ success: false, error: 'Resume ID is required' });
+        res
+          .status(400)
+          .json({ success: false, error: 'Resume ID is required' });
         return;
       }
 
-      const db = getDatabase();
-      
-      // Check if resume exists and belongs to user
-      const resume = await db.get(
-        `SELECT file_path FROM resumes WHERE id = ? ${userId ? 'AND user_id = ?' : ''}`,
-        userId ? [resumeId, userId] : [resumeId]
-      );
+      // Get resume to delete associated file
+      const resume = await prisma.resume.findUnique({
+        where: { id: resumeId },
+      });
 
       if (!resume) {
-        res.status(404).json({ success: false, error: 'Resume not found' });
+        res.status(404).json({
+          success: false,
+          error: 'Resume not found',
+        });
         return;
-      }
-
-      // Delete file from filesystem
-      try {
-        const fs = require('fs');
-        if (fs.existsSync(resume.file_path)) {
-          fs.unlinkSync(resume.file_path);
-        }
-      } catch (fileError) {
-        console.warn('Could not delete file from filesystem:', fileError);
       }
 
       // Delete from database
-      await db.run(`DELETE FROM resumes WHERE id = ?`, [resumeId]);
+      await prisma.resume.delete({
+        where: { id: resumeId },
+      });
+
+      // Delete file from filesystem
+      if (resume.filePath && fs.existsSync(resume.filePath)) {
+        try {
+          fs.unlinkSync(resume.filePath);
+        } catch (fileError) {
+          console.warn('Failed to delete resume file:', fileError);
+        }
+      }
 
       res.json({
         success: true,
         message: 'Resume deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting resume:', error);
+      console.error('Delete resume error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete resume',
@@ -219,81 +243,123 @@ export class ResumeController {
   };
 
   /**
-   * Re-parse resume with updated OpenAI prompt
+   * Reparse existing resume
    */
-  reparseResume = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  reparseResume = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
-      const { resumeId } = req.params;
-      const userId = req.userId;
-
+      const resumeId = req.params.resumeId;
       if (!resumeId) {
-        res.status(400).json({ success: false, error: 'Resume ID is required' });
+        res
+          .status(400)
+          .json({ success: false, error: 'Resume ID is required' });
         return;
       }
 
-      const db = getDatabase();
-      const resume = await db.get(
-        `SELECT original_text FROM resumes WHERE id = ? ${userId ? 'AND user_id = ?' : ''}`,
-        userId ? [resumeId, userId] : [resumeId]
-      );
+      const resume = await prisma.resume.findUnique({
+        where: { id: resumeId },
+      });
 
       if (!resume) {
-        res.status(404).json({ success: false, error: 'Resume not found' });
+        res.status(404).json({
+          success: false,
+          error: 'Resume not found',
+        });
         return;
       }
 
-      // Re-parse with OpenAI
-      const parsedData = await this.openaiService.parseResumeText(resume.original_text);
-
-      // Update database
-      await db.run(
-        `UPDATE resumes SET parsed_data = ?, updated_at = datetime('now') WHERE id = ?`,
-        [JSON.stringify(parsedData), resumeId]
+      // Re-parse the resume using OpenAI
+      const newParsedData = await this.openaiService.parseResumeText(
+        resume.originalText
       );
+
+      // Update resume with new parsed data
+      const updatedResume = await prisma.resume.update({
+        where: { id: resumeId },
+        data: {
+          parsedData: newParsedData as any,
+        },
+      });
 
       res.json({
         success: true,
-        data: parsedData,
+        data: {
+          id: updatedResume.id,
+          filename: updatedResume.filename,
+          uploadedAt: updatedResume.uploadedAt,
+          parsedData: updatedResume.parsedData,
+        },
       });
     } catch (error) {
-      console.error('Error re-parsing resume:', error);
+      console.error('Reparse resume error:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to re-parse resume',
+        error: 'Failed to reparse resume',
       });
     }
   };
 
   /**
-   * Get resume parsing statistics
+   * Get user's resume parsing statistics
    */
-  getParsingStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getParsingStats = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const userId = req.userId || req.params.userId;
-      
-      const db = getDatabase();
-      const stats = await db.get(`
-        SELECT 
-          COUNT(*) as total_resumes,
-          AVG(LENGTH(original_text)) as avg_text_length,
-          MAX(uploaded_at) as latest_upload
-        FROM resumes 
-        ${userId ? 'WHERE user_id = ?' : ''}
-      `, userId ? [userId] : []);
+
+      // Get resume stats
+      const resumeStats = await prisma.resume.aggregate({
+        where: userId ? { userId } : {},
+        _count: { id: true },
+      });
+
+      // Get latest resume upload
+      const latestResume = await prisma.resume.findFirst({
+        where: userId ? { userId } : {},
+        orderBy: { uploadedAt: 'desc' },
+        select: { uploadedAt: true },
+      });
+
+      // Get average text length (approximate)
+      const resumes = await prisma.resume.findMany({
+        where: userId ? { userId } : {},
+        select: { originalText: true },
+      });
+
+      const avgTextLength =
+        resumes.length > 0
+          ? Math.round(
+              resumes.reduce((sum, r) => sum + r.originalText.length, 0) /
+                resumes.length
+            )
+          : 0;
+
+      // Get interview stats
+      const interviewStats = await prisma.interviewSession.aggregate({
+        where: userId ? { userId } : {},
+        _count: { id: true },
+        _avg: { overallScore: true },
+      });
 
       res.json({
         success: true,
         data: {
-          totalResumes: stats.total_resumes || 0,
-          averageTextLength: Math.round(stats.avg_text_length || 0),
-          latestUpload: stats.latest_upload,
+          totalResumes: resumeStats._count.id || 0,
+          totalInterviews: interviewStats._count.id || 0,
+          averageScore: Math.round(interviewStats._avg.overallScore || 0),
+          averageTextLength: avgTextLength,
+          lastActivity: latestResume?.uploadedAt || null,
         },
       });
     } catch (error) {
-      console.error('Error fetching parsing stats:', error);
+      console.error('Get parsing stats error:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch parsing statistics',
+        error: 'Failed to fetch statistics',
       });
     }
   };

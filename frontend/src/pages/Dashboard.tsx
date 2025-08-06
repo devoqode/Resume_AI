@@ -274,7 +274,7 @@ export default function Dashboard() {
                       <div>
                         <p className="font-medium">AI Interview Session</p>
                         <p className="text-sm text-muted-foreground">
-                          {formatDate(session.startTime)} • {session.totalQuestions} questions
+                          {formatDate(session.startedAt || session.createdAt)} • {session.questions?.length || 0} questions
                         </p>
                       </div>
                     </div>
@@ -330,9 +330,9 @@ export default function Dashboard() {
                           <FileText className="w-6 h-6 text-primary" />
                         </div>
                         <div>
-                          <h3 className="font-semibold line-clamp-1">{resume.originalName}</h3>
+                          <h3 className="font-semibold line-clamp-1">{resume.filename}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {formatDate(resume.uploadDate)}
+                            {formatDate(resume.uploadedAt)}
                           </p>
                         </div>
                       </div>
@@ -357,11 +357,11 @@ export default function Dashboard() {
 
                     {resume.parsedData && (
                       <div className="space-y-2 mb-4">
-                        {resume.parsedData.name && (
-                          <p className="text-sm"><strong>Name:</strong> {resume.parsedData.name}</p>
+                        {resume.parsedData.personalInfo?.name && (
+                          <p className="text-sm"><strong>Name:</strong> {resume.parsedData.personalInfo.name}</p>
                         )}
-                        {resume.parsedData.email && (
-                          <p className="text-sm"><strong>Email:</strong> {resume.parsedData.email}</p>
+                        {resume.parsedData.personalInfo?.email && (
+                          <p className="text-sm"><strong>Email:</strong> {resume.parsedData.personalInfo.email}</p>
                         )}
                         {resume.parsedData.skills && resume.parsedData.skills.length > 0 && (
                           <p className="text-sm"><strong>Skills:</strong> {resume.parsedData.skills.slice(0, 3).join(', ')}</p>
@@ -429,7 +429,7 @@ export default function Dashboard() {
                         <div>
                           <h3 className="font-semibold">Interview Session</h3>
                           <p className="text-sm text-muted-foreground">
-                            {formatDate(session.startTime)} • {session.totalQuestions} questions • 
+                            {formatDate(session.startedAt || session.createdAt)} • {session.questions?.length || 0} questions • 
                             Status: {session.status}
                           </p>
                         </div>

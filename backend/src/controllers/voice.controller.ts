@@ -14,29 +14,35 @@ export class VoiceController {
     elevenLabsVoiceId: string,
     openaiApiKey: string
   ) {
-    this.elevenLabsService = new ElevenLabsService(elevenLabsApiKey, elevenLabsVoiceId);
+    this.elevenLabsService = new ElevenLabsService(
+      elevenLabsApiKey,
+      elevenLabsVoiceId
+    );
     this.whisperService = new WhisperService(openaiApiKey);
   }
 
   /**
    * Convert text to speech using ElevenLabs
    */
-  textToSpeech = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  textToSpeech = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const { text, voiceId, settings } = req.body;
 
       if (!text || typeof text !== 'string') {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Text is required and must be a string' 
+        res.status(400).json({
+          success: false,
+          error: 'Text is required and must be a string',
         });
         return;
       }
 
       if (text.length > 5000) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Text too long. Maximum 5000 characters allowed.' 
+        res.status(400).json({
+          success: false,
+          error: 'Text too long. Maximum 5000 characters allowed.',
         });
         return;
       }
@@ -60,7 +66,10 @@ export class VoiceController {
       console.error('Error in text-to-speech:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Text-to-speech conversion failed',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Text-to-speech conversion failed',
       });
     }
   };
@@ -68,20 +77,23 @@ export class VoiceController {
   /**
    * Convert text to speech and save as file
    */
-  textToSpeechFile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  textToSpeechFile = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const { text, voiceId, settings, filename } = req.body;
 
       if (!text || typeof text !== 'string') {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Text is required and must be a string' 
+        res.status(400).json({
+          success: false,
+          error: 'Text is required and must be a string',
         });
         return;
       }
 
       const audioFilename = filename || `tts_${Date.now()}`;
-      
+
       // Generate and save audio file
       const filePath = await this.elevenLabsService.textToSpeechFile(
         text,
@@ -102,7 +114,10 @@ export class VoiceController {
       console.error('Error in text-to-speech file generation:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Text-to-speech file generation failed',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Text-to-speech file generation failed',
       });
     }
   };
@@ -110,30 +125,37 @@ export class VoiceController {
   /**
    * Convert speech to text using Whisper
    */
-  speechToText = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  speechToText = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const audioFile = req.file;
 
       if (!audioFile) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Audio file is required' 
+        res.status(400).json({
+          success: false,
+          error: 'Audio file is required',
         });
         return;
       }
 
       // Validate audio file
-      const validation = await this.whisperService.validateAudioFile(audioFile.path);
+      const validation = await this.whisperService.validateAudioFile(
+        audioFile.path
+      );
       if (!validation.isValid) {
-        res.status(400).json({ 
-          success: false, 
-          error: validation.error 
+        res.status(400).json({
+          success: false,
+          error: validation.error,
         });
         return;
       }
 
       // Transcribe audio
-      const transcription = await this.whisperService.speechToText(audioFile.path);
+      const transcription = await this.whisperService.speechToText(
+        audioFile.path
+      );
 
       // Clean up uploaded file
       try {
@@ -153,7 +175,10 @@ export class VoiceController {
       console.error('Error in speech-to-text:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Speech-to-text conversion failed',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Speech-to-text conversion failed',
       });
     }
   };
@@ -161,34 +186,42 @@ export class VoiceController {
   /**
    * Convert speech to text with detailed response
    */
-  speechToTextVerbose = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  speechToTextVerbose = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const audioFile = req.file;
       const { language, prompt } = req.body;
 
       if (!audioFile) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Audio file is required' 
+        res.status(400).json({
+          success: false,
+          error: 'Audio file is required',
         });
         return;
       }
 
       // Validate audio file
-      const validation = await this.whisperService.validateAudioFile(audioFile.path);
+      const validation = await this.whisperService.validateAudioFile(
+        audioFile.path
+      );
       if (!validation.isValid) {
-        res.status(400).json({ 
-          success: false, 
-          error: validation.error 
+        res.status(400).json({
+          success: false,
+          error: validation.error,
         });
         return;
       }
 
       // Get verbose transcription
-      const result = await this.whisperService.speechToTextVerbose(audioFile.path, {
-        language,
-        prompt,
-      });
+      const result = await this.whisperService.speechToTextVerbose(
+        audioFile.path,
+        {
+          language,
+          prompt,
+        }
+      );
 
       // Clean up uploaded file
       try {
@@ -208,7 +241,10 @@ export class VoiceController {
       console.error('Error in verbose speech-to-text:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Verbose speech-to-text conversion failed',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Verbose speech-to-text conversion failed',
       });
     }
   };
@@ -216,7 +252,10 @@ export class VoiceController {
   /**
    * Get available voices from ElevenLabs
    */
-  getVoices = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getVoices = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const voices = await this.elevenLabsService.getVoices();
 
@@ -228,7 +267,8 @@ export class VoiceController {
       console.error('Error fetching voices:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch voices',
+        error:
+          error instanceof Error ? error.message : 'Failed to fetch voices',
       });
     }
   };
@@ -236,14 +276,17 @@ export class VoiceController {
   /**
    * Get specific voice details
    */
-  getVoice = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getVoice = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const { voiceId } = req.params;
 
       if (!voiceId) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Voice ID is required' 
+        res.status(400).json({
+          success: false,
+          error: 'Voice ID is required',
         });
         return;
       }
@@ -258,7 +301,10 @@ export class VoiceController {
       console.error('Error fetching voice details:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch voice details',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to fetch voice details',
       });
     }
   };
@@ -266,14 +312,17 @@ export class VoiceController {
   /**
    * Get voice settings
    */
-  getVoiceSettings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getVoiceSettings = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const { voiceId } = req.params;
 
       if (!voiceId) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Voice ID is required' 
+        res.status(400).json({
+          success: false,
+          error: 'Voice ID is required',
         });
         return;
       }
@@ -288,7 +337,10 @@ export class VoiceController {
       console.error('Error fetching voice settings:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch voice settings',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to fetch voice settings',
       });
     }
   };
@@ -296,15 +348,18 @@ export class VoiceController {
   /**
    * Update voice settings
    */
-  updateVoiceSettings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  updateVoiceSettings = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const { voiceId } = req.params;
       const { stability, similarityBoost, style, useSpeakerBoost } = req.body;
 
       if (!voiceId) {
-        res.status(400).json({ 
-          success: false, 
-          error: 'Voice ID is required' 
+        res.status(400).json({
+          success: false,
+          error: 'Voice ID is required',
         });
         return;
       }
@@ -324,7 +379,10 @@ export class VoiceController {
       console.error('Error updating voice settings:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to update voice settings',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to update voice settings',
       });
     }
   };
@@ -332,15 +390,18 @@ export class VoiceController {
   /**
    * Serve audio files
    */
-  serveAudioFile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  serveAudioFile = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const { filename } = req.params;
       const audioPath = path.join('./uploads/audio', filename);
 
       if (!fs.existsSync(audioPath)) {
-        res.status(404).json({ 
-          success: false, 
-          error: 'Audio file not found' 
+        res.status(404).json({
+          success: false,
+          error: 'Audio file not found',
         });
         return;
       }
@@ -351,19 +412,19 @@ export class VoiceController {
 
       if (range) {
         // Handle range requests for audio streaming
-        const parts = range.replace(/bytes=/, "").split("-");
+        const parts = range.replace(/bytes=/, '').split('-');
         const start = parseInt(parts[0], 10);
         const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        const chunksize = (end - start) + 1;
+        const chunksize = end - start + 1;
         const file = fs.createReadStream(audioPath, { start, end });
-        
+
         const head = {
           'Content-Range': `bytes ${start}-${end}/${fileSize}`,
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize,
           'Content-Type': 'audio/mpeg',
         };
-        
+
         res.writeHead(206, head);
         file.pipe(res);
       } else {
@@ -372,7 +433,7 @@ export class VoiceController {
           'Content-Length': fileSize,
           'Content-Type': 'audio/mpeg',
         };
-        
+
         res.writeHead(200, head);
         fs.createReadStream(audioPath).pipe(res);
       }
@@ -388,7 +449,10 @@ export class VoiceController {
   /**
    * Get audio file requirements and limits
    */
-  getAudioRequirements = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getAudioRequirements = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const requirements = this.whisperService.getAudioRequirements();
 
@@ -415,7 +479,10 @@ export class VoiceController {
   /**
    * Get ElevenLabs user info and quota
    */
-  getUserInfo = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  getUserInfo = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
     try {
       const userInfo = await this.elevenLabsService.getUserInfo();
 
@@ -427,7 +494,8 @@ export class VoiceController {
       console.error('Error fetching user info:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch user info',
+        error:
+          error instanceof Error ? error.message : 'Failed to fetch user info',
       });
     }
   };
