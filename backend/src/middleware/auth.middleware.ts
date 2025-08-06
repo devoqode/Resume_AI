@@ -22,7 +22,7 @@ export const authenticateToken = (jwtSecret: string) => {
     try {
       const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
       req.userId = decoded.userId;
-      return next();
+      next();
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         return res.status(401).json({ 
@@ -78,7 +78,7 @@ export const generateToken = (userId: string, email: string, jwtSecret: string, 
 export const verifyToken = (token: string, jwtSecret: string): JWTPayload | null => {
   try {
     return jwt.verify(token, jwtSecret) as JWTPayload;
-  } catch {
+  } catch (error) {
     return null;
   }
 };

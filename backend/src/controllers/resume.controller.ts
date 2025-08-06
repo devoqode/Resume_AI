@@ -1,12 +1,10 @@
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs';
-
+import path from 'path';
 import { getDatabase } from '../models/database';
 import { OpenAIService } from '../services/openai.service';
 import { FileProcessorService } from '../services/fileProcessor.service';
-import { AuthenticatedRequest } from '../types';
-import { logger } from '../utils/logger';
+import { ParsedResumeData, AuthenticatedRequest } from '../types';
 
 export class ResumeController {
   private openaiService: OpenAIService;
@@ -80,7 +78,7 @@ export class ResumeController {
         },
       });
     } catch (error) {
-      logger.error('Error uploading resume:', error);
+      console.error('Error uploading resume:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Resume upload failed',
@@ -117,7 +115,7 @@ export class ResumeController {
         data: formattedResumes,
       });
     } catch (error) {
-      logger.error('Error fetching resumes:', error);
+      console.error('Error fetching resumes:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch resumes',
@@ -160,7 +158,7 @@ export class ResumeController {
         },
       });
     } catch (error) {
-      logger.error('Error fetching resume:', error);
+      console.error('Error fetching resume:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch resume',
@@ -196,11 +194,12 @@ export class ResumeController {
 
       // Delete file from filesystem
       try {
+        const fs = require('fs');
         if (fs.existsSync(resume.file_path)) {
           fs.unlinkSync(resume.file_path);
         }
       } catch (fileError) {
-        logger.warn('Could not delete file from filesystem:', fileError);
+        console.warn('Could not delete file from filesystem:', fileError);
       }
 
       // Delete from database
@@ -211,7 +210,7 @@ export class ResumeController {
         message: 'Resume deleted successfully',
       });
     } catch (error) {
-      logger.error('Error deleting resume:', error);
+      console.error('Error deleting resume:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete resume',
@@ -257,7 +256,7 @@ export class ResumeController {
         data: parsedData,
       });
     } catch (error) {
-      logger.error('Error re-parsing resume:', error);
+      console.error('Error re-parsing resume:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to re-parse resume',
@@ -291,7 +290,7 @@ export class ResumeController {
         },
       });
     } catch (error) {
-      logger.error('Error fetching parsing stats:', error);
+      console.error('Error fetching parsing stats:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch parsing statistics',

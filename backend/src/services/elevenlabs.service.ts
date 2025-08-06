@@ -1,7 +1,6 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import fs from 'fs/promises';
 import path from 'path';
-import { logger } from '../utils/logger';
 
 export class ElevenLabsService {
   private client: ElevenLabsClient;
@@ -54,7 +53,7 @@ export class ElevenLabsService {
       
       return buffer;
     } catch (error) {
-      logger.error('Error in text-to-speech conversion:', error);
+      console.error('Error in text-to-speech conversion:', error);
       throw new Error(`TTS conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -72,7 +71,7 @@ export class ElevenLabsService {
       
       return filePath;
     } catch (error) {
-      logger.error('Error saving audio file:', error);
+      console.error('Error saving audio file:', error);
       throw new Error(`Failed to save audio file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -104,7 +103,7 @@ export class ElevenLabsService {
       const response = await this.client.voices.search();
       return response.voices || [];
     } catch (error) {
-      logger.error('Error fetching voices:', error);
+      console.error('Error fetching voices:', error);
       throw new Error(`Failed to fetch voices: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -117,7 +116,7 @@ export class ElevenLabsService {
       const response = await this.client.voices.get(voiceId);
       return response;
     } catch (error) {
-      logger.error('Error fetching voice details:', error);
+      console.error('Error fetching voice details:', error);
       throw new Error(`Failed to fetch voice details: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -127,15 +126,15 @@ export class ElevenLabsService {
    * Note: This is a premium feature that requires audio samples
    */
   async createCustomVoice(
-    _name: string,
-    _description: string,
-    _audioFiles: string[]
+    name: string,
+    description: string,
+    audioFiles: string[]
   ): Promise<string> {
     try {
       // Note: This method may need to be updated based on the actual ElevenLabs API
       throw new Error('Custom voice creation not implemented - please check ElevenLabs API documentation');
     } catch (error) {
-      logger.error('Error creating custom voice:', error);
+      console.error('Error creating custom voice:', error);
       throw new Error(`Failed to create custom voice: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -144,13 +143,13 @@ export class ElevenLabsService {
    * Speech to text conversion using ElevenLabs (if available)
    * Note: ElevenLabs primarily focuses on TTS. For STT, you might want to use OpenAI Whisper or other services
    */
-  async speechToText(_audioFilePath: string): Promise<string> {
+  async speechToText(audioFilePath: string): Promise<string> {
     try {
       // ElevenLabs doesn't have native STT, so we'll use a placeholder
       // In a real implementation, you might use OpenAI Whisper API or other STT services
       throw new Error('Speech-to-text not implemented with ElevenLabs. Consider using OpenAI Whisper API.');
     } catch (error) {
-      logger.error('Error in speech-to-text conversion:', error);
+      console.error('Error in speech-to-text conversion:', error);
       throw error;
     }
   }
@@ -163,7 +162,7 @@ export class ElevenLabsService {
       const response = await this.client.user.get();
       return response;
     } catch (error) {
-      logger.error('Error fetching user info:', error);
+      console.error('Error fetching user info:', error);
       throw new Error(`Failed to fetch user info: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -176,7 +175,7 @@ export class ElevenLabsService {
       const response = await this.client.voices.settings.get(voiceId);
       return response;
     } catch (error) {
-      logger.error('Error fetching voice settings:', error);
+      console.error('Error fetching voice settings:', error);
       throw new Error(`Failed to fetch voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -185,8 +184,8 @@ export class ElevenLabsService {
    * Update voice settings for a specific voice
    */
   async updateVoiceSettings(
-    _voiceId: string,
-    _settings: {
+    voiceId: string,
+    settings: {
       stability?: number;
       similarityBoost?: number;
       style?: number;
@@ -197,7 +196,7 @@ export class ElevenLabsService {
       // Note: Voice settings editing may need to be implemented based on actual ElevenLabs API
       throw new Error('Voice settings update not implemented - please check ElevenLabs API documentation');
     } catch (error) {
-      logger.error('Error updating voice settings:', error);
+      console.error('Error updating voice settings:', error);
       throw new Error(`Failed to update voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -227,7 +226,7 @@ export class ElevenLabsService {
           audioPath,
         });
       } catch (error) {
-        logger.error(`Error generating audio for question ${question.id}:`, error);
+        console.error(`Error generating audio for question ${question.id}:`, error);
         // Continue with other questions even if one fails
       }
     }

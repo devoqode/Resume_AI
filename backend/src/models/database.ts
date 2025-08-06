@@ -1,5 +1,4 @@
 import sqlite3 from 'sqlite3';
-import { logger } from '../utils/logger';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
@@ -17,9 +16,9 @@ export class Database {
 
     this.db = new sqlite3.Database(dbPath, (err) => {
       if (err) {
-        logger.error('Error opening database:', err.message);
+        console.error('Error opening database:', err.message);
       } else {
-        logger.info('Connected to SQLite database.');
+        console.log('Connected to SQLite database.');
       }
     });
 
@@ -128,9 +127,9 @@ export class Database {
       await runAsync('CREATE INDEX IF NOT EXISTS idx_voice_profiles_user_id ON voice_profiles (user_id)');
 
       this.initialized = true;
-      logger.info('Database initialized successfully.');
+      console.log('Database initialized successfully.');
     } catch (error) {
-      logger.error('Error initializing database:', error);
+      console.error('Error initializing database:', error);
       throw error;
     }
   }
@@ -178,7 +177,7 @@ export class Database {
         if (err) {
           reject(err);
         } else {
-          logger.info('Database connection closed.');
+          console.log('Database connection closed.');
           resolve();
         }
       });

@@ -198,9 +198,8 @@ export const useInterviewSession = (sessionId: string) => {
     queryFn: () => interviewAPI.getSession(sessionId),
     enabled: !!sessionId,
     select: (response) => response.success ? response.data : null,
-    refetchInterval: (query) => {
+    refetchInterval: (data, query) => {
       // Refetch every 2 seconds if interview is active
-      const data = query.state.data;
       if (data && data.success && data.data?.status === 'active') {
         return 2000;
       }

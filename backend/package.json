@@ -2,7 +2,6 @@
   "name": "ai-interview-backend",
   "version": "1.0.0",
   "description": "AI Interview Web Application Backend with OpenAI and ElevenLabs integration",
-  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "npm install && prisma generate && tsc",
@@ -14,10 +13,6 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -55,18 +50,11 @@
     "prisma": "^6.13.0",
     "sqlite3": "^5.1.7",
     "typescript": "^5.9.2",
-    "uuid": "^11.1.0",
-    "winston": "^3.17.0"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.2.0",
-    "@types/winston": "^2.4.4",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
-    "eslint": "^9.32.0",
-    "eslint-config-prettier": "^10.1.8",
     "nodemon": "^3.1.10",
-    "prettier": "^3.6.2",
     "ts-node": "^10.9.2"
   }
 }

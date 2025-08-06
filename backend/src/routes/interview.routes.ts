@@ -1,21 +1,21 @@
-import { Router, Request } from 'express';
-import multer, { FileFilterCallback, File } from 'multer';
+import { Router } from 'express';
+import multer from 'multer';
 import path from 'path';
 import { InterviewController } from '../controllers/interview.controller';
 
 // Multer configuration for audio uploads
 const audioStorage = multer.diskStorage({
-  destination: (req: Request, file: File, cb: (error: Error | null, destination: string) => void) => {
+  destination: (req: any, file: any, cb: any) => {
     cb(null, './uploads/audio/responses/');
   },
-  filename: (req: Request, file: File, cb: (error: Error | null, filename: string) => void) => {
+  filename: (req: any, file: any, cb: any) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const extension = path.extname(file.originalname) || '.mp3';
     cb(null, `response-${uniqueSuffix}${extension}`);
   },
 });
 
-const audioFileFilter = (req: Request, file: File, cb: FileFilterCallback) => {
+const audioFileFilter = (req: any, file: any, cb: any) => {
   const allowedExtensions = ['.mp3', '.wav', '.m4a', '.webm', '.mp4', '.mpeg', '.mpga'];
   const fileExtension = path.extname(file.originalname).toLowerCase();
   
