@@ -5,10 +5,10 @@ import { ResumeController } from '../controllers/resume.controller';
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req: any, file: any, cb: any) => {
     cb(null, './uploads/resumes/');
   },
-  filename: (req, file, cb) => {
+  filename: (req: any, file: any, cb: any) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const extension = path.extname(file.originalname);
     cb(null, `resume-${uniqueSuffix}${extension}`);

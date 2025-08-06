@@ -1,12 +1,9 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { ElevenLabsService } from '../services/elevenlabs.service';
 import { WhisperService } from '../services/whisper.service';
-
-interface AuthenticatedRequest extends Request {
-  userId?: string;
-}
+import { AuthenticatedRequest } from '../types';
 
 export class VoiceController {
   private elevenLabsService: ElevenLabsService;
@@ -24,7 +21,7 @@ export class VoiceController {
   /**
    * Convert text to speech using ElevenLabs
    */
-  textToSpeech = async (req: Request, res: Response): Promise<void> => {
+  textToSpeech = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { text, voiceId, settings } = req.body;
 
@@ -71,7 +68,7 @@ export class VoiceController {
   /**
    * Convert text to speech and save as file
    */
-  textToSpeechFile = async (req: Request, res: Response): Promise<void> => {
+  textToSpeechFile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { text, voiceId, settings, filename } = req.body;
 
@@ -113,7 +110,7 @@ export class VoiceController {
   /**
    * Convert speech to text using Whisper
    */
-  speechToText = async (req: Request, res: Response): Promise<void> => {
+  speechToText = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const audioFile = req.file;
 
@@ -164,7 +161,7 @@ export class VoiceController {
   /**
    * Convert speech to text with detailed response
    */
-  speechToTextVerbose = async (req: Request, res: Response): Promise<void> => {
+  speechToTextVerbose = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const audioFile = req.file;
       const { language, prompt } = req.body;
@@ -219,7 +216,7 @@ export class VoiceController {
   /**
    * Get available voices from ElevenLabs
    */
-  getVoices = async (req: Request, res: Response): Promise<void> => {
+  getVoices = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const voices = await this.elevenLabsService.getVoices();
 
@@ -239,7 +236,7 @@ export class VoiceController {
   /**
    * Get specific voice details
    */
-  getVoice = async (req: Request, res: Response): Promise<void> => {
+  getVoice = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { voiceId } = req.params;
 
@@ -269,7 +266,7 @@ export class VoiceController {
   /**
    * Get voice settings
    */
-  getVoiceSettings = async (req: Request, res: Response): Promise<void> => {
+  getVoiceSettings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { voiceId } = req.params;
 
@@ -299,7 +296,7 @@ export class VoiceController {
   /**
    * Update voice settings
    */
-  updateVoiceSettings = async (req: Request, res: Response): Promise<void> => {
+  updateVoiceSettings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { voiceId } = req.params;
       const { stability, similarityBoost, style, useSpeakerBoost } = req.body;
@@ -335,7 +332,7 @@ export class VoiceController {
   /**
    * Serve audio files
    */
-  serveAudioFile = async (req: Request, res: Response): Promise<void> => {
+  serveAudioFile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { filename } = req.params;
       const audioPath = path.join('./uploads/audio', filename);
@@ -391,7 +388,7 @@ export class VoiceController {
   /**
    * Get audio file requirements and limits
    */
-  getAudioRequirements = async (req: Request, res: Response): Promise<void> => {
+  getAudioRequirements = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const requirements = this.whisperService.getAudioRequirements();
 
@@ -418,7 +415,7 @@ export class VoiceController {
   /**
    * Get ElevenLabs user info and quota
    */
-  getUserInfo = async (req: Request, res: Response): Promise<void> => {
+  getUserInfo = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const userInfo = await this.elevenLabsService.getUserInfo();
 

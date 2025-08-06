@@ -1,15 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { Response, NextFunction } from 'express';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import { AuthenticatedRequest } from '../types';
 
-interface AuthenticatedRequest extends Request {
-  userId?: string;
-}
-
-interface JWTPayload {
+interface JWTPayload extends JwtPayload {
   userId: string;
   email: string;
-  iat?: number;
-  exp?: number;
 }
 
 export const authenticateToken = (jwtSecret: string) => {

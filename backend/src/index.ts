@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import path from 'path';
 import fs from 'fs';
 import { config } from './config';
-import { getDatabase } from './models/database';
+import prisma from './lib/prisma';
 import { createResumeRoutes } from './routes/resume.routes';
 import { createInterviewRoutes } from './routes/interview.routes';
 import { createVoiceRoutes } from './routes/voice.routes';
@@ -127,11 +127,12 @@ app.post('/api/auth/signup', async (req, res) => {
       });
     }
 
-    const db = getDatabase();
     const userId = uuidv4();
 
     // Check if user already exists
-    const existingUser = await db.get('SELECT id FROM users WHERE email = ?', [email]);
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
     if (existingUser) {
       return res.status(409).json({
         success: false,
@@ -140,10 +141,15 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     // Create user (in production, hash the password)
-    await db.run(
-      'INSERT INTO users (id, email, first_name, last_name, phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, datetime("now"), datetime("now"))',
-      [userId, email, firstName, lastName, null]
-    );
+    const user = await prisma.user.create({
+      data: {
+        id: userId,
+        email,
+        firstName,
+        lastName,
+        phone: null
+      }
+    });
 
     // Generate JWT token
     const token = generateToken(userId, email, config.jwt.secret);
@@ -152,10 +158,10 @@ app.post('/api/auth/signup', async (req, res) => {
       success: true,
       data: {
         user: {
-          id: userId,
-          email,
-          firstName,
-          lastName,
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
         },
         token,
       },
@@ -180,13 +186,16 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    const db = getDatabase();
-
     // Find user by email
-    const user = await db.get(
-      'SELECT id, email, first_name, last_name FROM users WHERE email = ?',
-      [email]
-    );
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true
+      }
+    });
 
     if (!user) {
       return res.status(401).json({
@@ -207,8 +216,8 @@ app.post('/api/auth/login', async (req, res) => {
         user: {
           id: user.id,
           email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
+          firstName: user.firstName,
+          lastName: user.lastName,
         },
         token,
       },
@@ -232,11 +241,12 @@ app.post('/api/auth/create-test-user', async (req, res) => {
   }
 
   try {
-    const db = getDatabase();
     const testUser = config.auth.testUser;
 
     // Check if test user already exists
-    const existingUser = await db.get('SELECT id FROM users WHERE id = ?', [testUser.id]);
+    const existingUser = await prisma.user.findUnique({
+      where: { id: testUser.id }
+    });
     if (existingUser) {
       return res.json({
         success: true,
@@ -246,10 +256,14 @@ app.post('/api/auth/create-test-user', async (req, res) => {
     }
 
     // Create test user
-    await db.run(
-      'INSERT INTO users (id, email, first_name, last_name, created_at, updated_at) VALUES (?, ?, ?, ?, datetime("now"), datetime("now"))',
-      [testUser.id, testUser.email, testUser.firstName, testUser.lastName]
-    );
+    await prisma.user.create({
+      data: {
+        id: testUser.id,
+        email: testUser.email,
+        firstName: testUser.firstName,
+        lastName: testUser.lastName
+      }
+    });
 
     res.json({
       success: true,
@@ -354,10 +368,9 @@ async function startServer() {
       console.warn('⚠️  Warning: ElevenLabs API key not configured. Set ELEVENLABS_API_KEY environment variable.');
     }
 
-    // Initialize database (using SQLite for development)
-    const db = getDatabase(config.database.sqlite.path);
-    await db.initialize();
-    console.log('✅ Database initialized successfully');
+    // Initialize Prisma database connection
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
 
     // Start server
     const server = app.listen(config.port, () => {
@@ -379,7 +392,7 @@ async function startServer() {
         console.log('📴 HTTP server closed');
         
         try {
-          await db.close();
+          await prisma.$disconnect();
           console.log('🗃️  Database connection closed');
         } catch (error) {
           console.error('Error closing database:', error);

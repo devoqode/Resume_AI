@@ -5,10 +5,10 @@ import { VoiceController } from '../controllers/voice.controller';
 
 // Multer configuration for audio uploads (STT)
 const sttStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req: any, file: any, cb: any) => {
     cb(null, './uploads/audio/stt/');
   },
-  filename: (req, file, cb) => {
+  filename: (req: any, file: any, cb: any) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const extension = path.extname(file.originalname) || '.mp3';
     cb(null, `stt-${uniqueSuffix}${extension}`);
@@ -48,27 +48,27 @@ export const createVoiceRoutes = (
   );
 
   // Text-to-Speech routes
-  router.post('/tts', voiceController.textToSpeech);
-  router.post('/tts/file', voiceController.textToSpeechFile);
+  router.post('/tts', voiceController.textToSpeech.bind(voiceController));
+  router.post('/tts/file', voiceController.textToSpeechFile.bind(voiceController));
 
   // Speech-to-Text routes
-  router.post('/stt', sttUpload.single('audio'), voiceController.speechToText);
-  router.post('/stt/verbose', sttUpload.single('audio'), voiceController.speechToTextVerbose);
+  router.post('/stt', sttUpload.single('audio'), voiceController.speechToText.bind(voiceController));
+  router.post('/stt/verbose', sttUpload.single('audio'), voiceController.speechToTextVerbose.bind(voiceController));
 
   // Voice management routes
-  router.get('/voices', voiceController.getVoices);
-  router.get('/voices/:voiceId', voiceController.getVoice);
-  router.get('/voices/:voiceId/settings', voiceController.getVoiceSettings);
-  router.put('/voices/:voiceId/settings', voiceController.updateVoiceSettings);
+  router.get('/voices', voiceController.getVoices.bind(voiceController));
+  router.get('/voices/:voiceId', voiceController.getVoice.bind(voiceController));
+  router.get('/voices/:voiceId/settings', voiceController.getVoiceSettings.bind(voiceController));
+  router.put('/voices/:voiceId/settings', voiceController.updateVoiceSettings.bind(voiceController));
 
   // Serve audio files
-  router.get('/audio/:filename', voiceController.serveAudioFile);
+  router.get('/audio/:filename', voiceController.serveAudioFile.bind(voiceController));
 
   // Get audio requirements and limits
-  router.get('/requirements', voiceController.getAudioRequirements);
+  router.get('/requirements', voiceController.getAudioRequirements.bind(voiceController));
 
   // Get ElevenLabs user info and quota
-  router.get('/user/info', voiceController.getUserInfo);
+  router.get('/user/info', voiceController.getUserInfo.bind(voiceController));
 
   return router;
 };

@@ -1,14 +1,10 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { getDatabase } from '../models/database';
 import { OpenAIService } from '../services/openai.service';
 import { FileProcessorService } from '../services/fileProcessor.service';
-import { ParsedResumeData } from '../types';
-
-interface AuthenticatedRequest extends Request {
-  userId?: string;
-}
+import { ParsedResumeData, AuthenticatedRequest } from '../types';
 
 export class ResumeController {
   private openaiService: OpenAIService;

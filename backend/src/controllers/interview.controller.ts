@@ -1,14 +1,10 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../models/database';
 import { OpenAIService } from '../services/openai.service';
 import { ElevenLabsService } from '../services/elevenlabs.service';
 import { WhisperService } from '../services/whisper.service';
-import { InterviewSession, InterviewQuestion, InterviewResponse, ParsedResumeData, AIEvaluation } from '../types';
-
-interface AuthenticatedRequest extends Request {
-  userId?: string;
-}
+import { InterviewSession, InterviewQuestion, InterviewResponse, ParsedResumeData, AIEvaluation, AuthenticatedRequest } from '../types';
 
 export class InterviewController {
   private openaiService: OpenAIService;
@@ -174,7 +170,7 @@ export class InterviewController {
         
         // Transcribe audio to text using Whisper
         try {
-          const transcription = await this.whisperService.speechToText(audioFilePath);
+          const transcription = await this.whisperService.speechToText(audioFilePath!);
           if (transcription && transcription.trim().length > 0) {
             finalResponseText = transcription;
           }

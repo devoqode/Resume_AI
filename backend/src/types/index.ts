@@ -1,3 +1,13 @@
+import { Request } from 'express';
+import { JwtPayload } from 'jsonwebtoken';
+
+// Import Multer types for file uploads
+import 'multer';
+
+export interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
+
 export interface User {
   id: string;
   email: string;
