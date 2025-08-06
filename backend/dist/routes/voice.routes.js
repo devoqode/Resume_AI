@@ -14,16 +14,25 @@ const sttStorage = multer_1.default.diskStorage({
         cb(null, './uploads/audio/stt/');
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
         const extension = path_1.default.extname(file.originalname) || '.mp3';
         cb(null, `stt-${uniqueSuffix}${extension}`);
     },
 });
 const audioFileFilter = (req, file, cb) => {
     // Whisper supported formats
-    const allowedExtensions = ['.mp3', '.mp4', '.mpeg', '.mpga', '.m4a', '.wav', '.webm'];
+    const allowedExtensions = [
+        '.mp3',
+        '.mp4',
+        '.mpeg',
+        '.mpga',
+        '.m4a',
+        '.wav',
+        '.webm',
+    ];
     const fileExtension = path_1.default.extname(file.originalname).toLowerCase();
-    if (allowedExtensions.includes(fileExtension) || file.mimetype.startsWith('audio/')) {
+    if (allowedExtensions.includes(fileExtension) ||
+        file.mimetype.startsWith('audio/')) {
         cb(null, true);
     }
     else {

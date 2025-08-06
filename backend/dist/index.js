@@ -10,6 +10,7 @@ const morgan_1 = __importDefault(require("morgan"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const config_1 = require("./config");
+const validateEnv_1 = require("./utils/validateEnv");
 const prisma_1 = __importDefault(require("./lib/prisma"));
 const resume_routes_1 = require("./routes/resume.routes");
 const interview_routes_1 = require("./routes/interview.routes");
@@ -18,6 +19,21 @@ const error_middleware_1 = require("./middleware/error.middleware");
 const auth_middleware_1 = require("./middleware/auth.middleware");
 const uuid_1 = require("uuid");
 const app = (0, express_1.default)();
+// Validate environment configuration
+const envValidation = (0, validateEnv_1.validateEnvironment)();
+if (!envValidation.isValid) {
+    console.error('❌ Environment validation failed:');
+    envValidation.errors.forEach(error => {
+        console.error(`  - ${error}`);
+    });
+    process.exit(1);
+}
+if (envValidation.warnings.length > 0) {
+    console.warn('⚠️  Environment warnings:');
+    envValidation.warnings.forEach(warning => {
+        console.warn(`  - ${warning}`);
+    });
+}
 // Create required directories
 const requiredDirs = [
     './uploads',
@@ -183,8 +199,16 @@ app.post('/api/auth/login', async (req, res) => {
                 error: 'Invalid email or password',
             });
         }
-        // In production, verify password hash here
-        // For testing, we'll accept any password
+        // TODO: Implement proper password verification
+        // For now, require a minimum password length
+        if (password.length < 6) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid email or password',
+            });
+        }
+        // In a real application, verify the password hash here
+        // const isValidPassword = await bcrypt.compare(password, user.passwordHash);
         // Generate JWT token
         const token = (0, auth_middleware_1.generateToken)(user.id, user.email, config_1.config.jwt.secret);
         res.json({

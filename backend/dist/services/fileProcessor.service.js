@@ -173,7 +173,11 @@ class FileProcessorService {
         artifactPatterns.forEach((pattern, index) => {
             const matches = text.match(pattern);
             if (matches && matches.length > 3) {
-                const artifactTypes = ['Special characters', 'Repeated characters', 'Excessive whitespace'];
+                const artifactTypes = [
+                    'Special characters',
+                    'Repeated characters',
+                    'Excessive whitespace',
+                ];
                 issues.push(`Multiple ${artifactTypes[index]} detected`);
                 score -= 15;
             }
@@ -186,7 +190,7 @@ class FileProcessorService {
             /education/i,
             /skills/i,
         ];
-        const structureMatches = structurePatterns.filter(pattern => pattern.test(text)).length;
+        const structureMatches = structurePatterns.filter((pattern) => pattern.test(text)).length;
         if (structureMatches < 2) {
             issues.push('Limited structured content detected');
             score -= 20;

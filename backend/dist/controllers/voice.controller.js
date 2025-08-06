@@ -19,14 +19,14 @@ class VoiceController {
                 if (!text || typeof text !== 'string') {
                     res.status(400).json({
                         success: false,
-                        error: 'Text is required and must be a string'
+                        error: 'Text is required and must be a string',
                     });
                     return;
                 }
                 if (text.length > 5000) {
                     res.status(400).json({
                         success: false,
-                        error: 'Text too long. Maximum 5000 characters allowed.'
+                        error: 'Text too long. Maximum 5000 characters allowed.',
                     });
                     return;
                 }
@@ -44,7 +44,9 @@ class VoiceController {
                 console.error('Error in text-to-speech:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Text-to-speech conversion failed',
+                    error: error instanceof Error
+                        ? error.message
+                        : 'Text-to-speech conversion failed',
                 });
             }
         };
@@ -57,7 +59,7 @@ class VoiceController {
                 if (!text || typeof text !== 'string') {
                     res.status(400).json({
                         success: false,
-                        error: 'Text is required and must be a string'
+                        error: 'Text is required and must be a string',
                     });
                     return;
                 }
@@ -77,7 +79,9 @@ class VoiceController {
                 console.error('Error in text-to-speech file generation:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Text-to-speech file generation failed',
+                    error: error instanceof Error
+                        ? error.message
+                        : 'Text-to-speech file generation failed',
                 });
             }
         };
@@ -90,7 +94,7 @@ class VoiceController {
                 if (!audioFile) {
                     res.status(400).json({
                         success: false,
-                        error: 'Audio file is required'
+                        error: 'Audio file is required',
                     });
                     return;
                 }
@@ -99,7 +103,7 @@ class VoiceController {
                 if (!validation.isValid) {
                     res.status(400).json({
                         success: false,
-                        error: validation.error
+                        error: validation.error,
                     });
                     return;
                 }
@@ -124,7 +128,9 @@ class VoiceController {
                 console.error('Error in speech-to-text:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Speech-to-text conversion failed',
+                    error: error instanceof Error
+                        ? error.message
+                        : 'Speech-to-text conversion failed',
                 });
             }
         };
@@ -138,7 +144,7 @@ class VoiceController {
                 if (!audioFile) {
                     res.status(400).json({
                         success: false,
-                        error: 'Audio file is required'
+                        error: 'Audio file is required',
                     });
                     return;
                 }
@@ -147,7 +153,7 @@ class VoiceController {
                 if (!validation.isValid) {
                     res.status(400).json({
                         success: false,
-                        error: validation.error
+                        error: validation.error,
                     });
                     return;
                 }
@@ -175,7 +181,9 @@ class VoiceController {
                 console.error('Error in verbose speech-to-text:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Verbose speech-to-text conversion failed',
+                    error: error instanceof Error
+                        ? error.message
+                        : 'Verbose speech-to-text conversion failed',
                 });
             }
         };
@@ -207,7 +215,7 @@ class VoiceController {
                 if (!voiceId) {
                     res.status(400).json({
                         success: false,
-                        error: 'Voice ID is required'
+                        error: 'Voice ID is required',
                     });
                     return;
                 }
@@ -221,7 +229,9 @@ class VoiceController {
                 console.error('Error fetching voice details:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to fetch voice details',
+                    error: error instanceof Error
+                        ? error.message
+                        : 'Failed to fetch voice details',
                 });
             }
         };
@@ -234,7 +244,7 @@ class VoiceController {
                 if (!voiceId) {
                     res.status(400).json({
                         success: false,
-                        error: 'Voice ID is required'
+                        error: 'Voice ID is required',
                     });
                     return;
                 }
@@ -248,7 +258,9 @@ class VoiceController {
                 console.error('Error fetching voice settings:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to fetch voice settings',
+                    error: error instanceof Error
+                        ? error.message
+                        : 'Failed to fetch voice settings',
                 });
             }
         };
@@ -262,7 +274,7 @@ class VoiceController {
                 if (!voiceId) {
                     res.status(400).json({
                         success: false,
-                        error: 'Voice ID is required'
+                        error: 'Voice ID is required',
                     });
                     return;
                 }
@@ -281,7 +293,9 @@ class VoiceController {
                 console.error('Error updating voice settings:', error);
                 res.status(500).json({
                     success: false,
-                    error: error instanceof Error ? error.message : 'Failed to update voice settings',
+                    error: error instanceof Error
+                        ? error.message
+                        : 'Failed to update voice settings',
                 });
             }
         };
@@ -295,7 +309,7 @@ class VoiceController {
                 if (!fs_1.default.existsSync(audioPath)) {
                     res.status(404).json({
                         success: false,
-                        error: 'Audio file not found'
+                        error: 'Audio file not found',
                     });
                     return;
                 }
@@ -304,10 +318,10 @@ class VoiceController {
                 const range = req.headers.range;
                 if (range) {
                     // Handle range requests for audio streaming
-                    const parts = range.replace(/bytes=/, "").split("-");
+                    const parts = range.replace(/bytes=/, '').split('-');
                     const start = parseInt(parts[0], 10);
                     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-                    const chunksize = (end - start) + 1;
+                    const chunksize = end - start + 1;
                     const file = fs_1.default.createReadStream(audioPath, { start, end });
                     const head = {
                         'Content-Range': `bytes ${start}-${end}/${fileSize}`,

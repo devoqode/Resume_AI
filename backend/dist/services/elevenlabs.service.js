@@ -7,6 +7,7 @@ exports.ElevenLabsService = void 0;
 const elevenlabs_js_1 = require("@elevenlabs/elevenlabs-js");
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
+// ElevenLabs service implementation
 class ElevenLabsService {
     constructor(apiKey, defaultVoiceId = 'pNInz6obpgDQGcFmaJgB') {
         this.client = new elevenlabs_js_1.ElevenLabsClient({ apiKey });
@@ -18,7 +19,7 @@ class ElevenLabsService {
     async textToSpeech(text, voiceId, options) {
         try {
             const audioStream = await this.client.textToSpeech.convert(voiceId || this.defaultVoiceId, {
-                text: text,
+                text,
                 modelId: 'eleven_multilingual_v2',
                 voiceSettings: {
                     stability: options?.stability ?? 0.5,
@@ -100,7 +101,7 @@ class ElevenLabsService {
      * Create a custom voice from audio samples
      * Note: This is a premium feature that requires audio samples
      */
-    async createCustomVoice(name, description, audioFiles) {
+    async createCustomVoice(_name, _description, _audioFiles) {
         try {
             // Note: This method may need to be updated based on the actual ElevenLabs API
             throw new Error('Custom voice creation not implemented - please check ElevenLabs API documentation');
@@ -114,7 +115,7 @@ class ElevenLabsService {
      * Speech to text conversion using ElevenLabs (if available)
      * Note: ElevenLabs primarily focuses on TTS. For STT, you might want to use OpenAI Whisper or other services
      */
-    async speechToText(audioFilePath) {
+    async speechToText(_audioFilePath) {
         try {
             // ElevenLabs doesn't have native STT, so we'll use a placeholder
             // In a real implementation, you might use OpenAI Whisper API or other STT services
@@ -154,7 +155,7 @@ class ElevenLabsService {
     /**
      * Update voice settings for a specific voice
      */
-    async updateVoiceSettings(voiceId, settings) {
+    async updateVoiceSettings(_voiceId, _settings) {
         try {
             // Note: Voice settings editing may need to be implemented based on actual ElevenLabs API
             throw new Error('Voice settings update not implemented - please check ElevenLabs API documentation');

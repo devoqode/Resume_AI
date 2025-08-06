@@ -88,12 +88,12 @@ Only return the JSON object, no additional text.
      */
     async generateInterviewQuestions(workExperience) {
         try {
-            const experienceContext = workExperience.map(exp => ({
+            const experienceContext = workExperience.map((exp) => ({
                 title: exp.title,
                 company: exp.company,
                 duration: exp.duration,
                 description: exp.description,
-                skills: exp.skills
+                skills: exp.skills,
             }));
             const prompt = `
 You are an expert technical interviewer. Based on the following work experience, generate exactly 5 tailored interview questions that would help assess this candidate's skills, experience, and fit for similar roles.
@@ -141,7 +141,7 @@ Only return the JSON array, no additional text.
                     questionText: q.questionText,
                     questionType: q.questionType || 'experience',
                     orderIndex: index + 1,
-                    isRequired: q.isRequired !== false,
+                    isRequired: true,
                 }));
             }
             catch (parseError) {
@@ -162,11 +162,11 @@ Only return the JSON array, no additional text.
                 question,
                 response,
                 expectedSkills,
-                workExperience: workContext.map(exp => ({
+                workExperience: workContext.map((exp) => ({
                     title: exp.title,
                     company: exp.company,
-                    skills: exp.skills
-                }))
+                    skills: exp.skills,
+                })),
             };
             const prompt = `
 You are an expert interview evaluator. Evaluate the following interview response based on relevance, clarity, completeness, and technical accuracy (if applicable).

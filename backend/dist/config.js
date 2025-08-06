@@ -15,7 +15,10 @@ exports.config = {
     database: {
         // For production: Use PostgreSQL
         postgresql: {
-            url: process.env.DATABASE_URL || '',
+            url: process.env.DATABASE_URL || (() => {
+                console.error('FATAL: DATABASE_URL environment variable is required');
+                process.exit(1);
+            })(),
             host: process.env.DB_HOST || '',
             port: parseInt(process.env.DB_PORT || '5432'),
             database: process.env.DB_NAME || '',
@@ -29,17 +32,30 @@ exports.config = {
     },
     // OpenAI Configuration
     openai: {
-        apiKey: process.env.OPENAI_API_KEY || 'your_openai_api_key_here',
+        apiKey: process.env.OPENAI_API_KEY || (() => {
+            console.error('WARNING: OPENAI_API_KEY environment variable is not set');
+            return null;
+        })(),
         model: process.env.OPENAI_MODEL || 'gpt-4o',
     },
     // ElevenLabs Configuration
     elevenlabs: {
-        apiKey: process.env.ELEVENLABS_API_KEY || 'your_elevenlabs_api_key_here',
+        apiKey: process.env.ELEVENLABS_API_KEY || (() => {
+            console.error('WARNING: ELEVENLABS_API_KEY environment variable is not set');
+            return null;
+        })(),
         voiceId: process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB', // Default Adam voice
     },
     // JWT Configuration
     jwt: {
-        secret: process.env.JWT_SECRET || 'ai-interview-app-secret-key-2025',
+        secret: process.env.JWT_SECRET || (() => {
+            if (process.env.NODE_ENV === 'production') {
+                console.error('FATAL: JWT_SECRET environment variable is required in production');
+                process.exit(1);
+            }
+            console.warn('WARNING: Using default JWT secret. Set JWT_SECRET environment variable.');
+            return 'ai-interview-app-secret-key-2025';
+        })(),
         expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
     // File Upload Configuration
@@ -54,9 +70,9 @@ exports.config = {
         requests: parseInt(process.env.RATE_LIMIT_REQUESTS || '100'),
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
     },
-    // Auth bypass for testing
+    // Auth bypass for testing (only in development)
     auth: {
-        bypassAuth: process.env.BYPASS_AUTH === 'true' || process.env.NODE_ENV === 'development',
+        bypassAuth: process.env.BYPASS_AUTH === 'true' && process.env.NODE_ENV === 'development',
         testUser: {
             id: 'test-user-123',
             email: 'test@example.com',

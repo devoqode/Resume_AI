@@ -29,7 +29,8 @@ class WhisperService {
                 response_format: options?.responseFormat || 'text',
                 temperature: options?.temperature || 0,
             });
-            if (options?.responseFormat === 'json' || options?.responseFormat === 'verbose_json') {
+            if (options?.responseFormat === 'json' ||
+                options?.responseFormat === 'verbose_json') {
                 return response.text || '';
             }
             return response;
@@ -83,7 +84,8 @@ class WhisperService {
                 response_format: options?.responseFormat || 'text',
                 temperature: options?.temperature || 0,
             });
-            if (options?.responseFormat === 'json' || options?.responseFormat === 'verbose_json') {
+            if (options?.responseFormat === 'json' ||
+                options?.responseFormat === 'verbose_json') {
                 return response.text || '';
             }
             return response;
@@ -121,7 +123,8 @@ class WhisperService {
                 };
             }
             const fileExtension = audioFilePath.split('.').pop()?.toLowerCase();
-            if (!fileExtension || !requirements.supportedFormats.includes(fileExtension)) {
+            if (!fileExtension ||
+                !requirements.supportedFormats.includes(fileExtension)) {
                 return {
                     isValid: false,
                     error: `Unsupported file format. Supported formats: ${requirements.supportedFormats.join(', ')}`,

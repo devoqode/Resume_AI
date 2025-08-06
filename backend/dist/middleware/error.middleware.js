@@ -14,7 +14,7 @@ class AppError extends Error {
     }
 }
 exports.AppError = AppError;
-const errorHandler = (error, req, res, next) => {
+const errorHandler = (error, req, res, _next) => {
     let statusCode = 500;
     let message = 'Internal server error';
     let details = undefined;
@@ -40,36 +40,36 @@ const errorHandler = (error, req, res, next) => {
                 message = error.message;
         }
     }
-    else if (error.name === 'ValidationError') {
+    else if (error && typeof error === 'object' && 'name' in error && error.name === 'ValidationError') {
         statusCode = 400;
         message = 'Validation error';
         details = error.details || error.message;
     }
-    else if (error.name === 'CastError') {
+    else if (error && typeof error === 'object' && 'name' in error && error.name === 'CastError') {
         statusCode = 400;
         message = 'Invalid data format';
     }
-    else if (error.code === 11000) {
+    else if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
         statusCode = 400;
         message = 'Duplicate entry';
     }
-    else if (error.name === 'JsonWebTokenError') {
+    else if (error && typeof error === 'object' && 'name' in error && error.name === 'JsonWebTokenError') {
         statusCode = 401;
         message = 'Invalid token';
     }
-    else if (error.name === 'TokenExpiredError') {
+    else if (error && typeof error === 'object' && 'name' in error && error.name === 'TokenExpiredError') {
         statusCode = 401;
         message = 'Token expired';
     }
-    else if (error.code === 'ENOENT') {
+    else if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
         statusCode = 404;
         message = 'File not found';
     }
-    else if (error.code === 'EACCES') {
+    else if (error && typeof error === 'object' && 'code' in error && error.code === 'EACCES') {
         statusCode = 403;
         message = 'Permission denied';
     }
-    else if (error.message) {
+    else if (error && typeof error === 'object' && 'message' in error) {
         message = error.message;
     }
     // Log error for debugging (in production, you might want to use a proper logger)
@@ -93,9 +93,9 @@ const errorHandler = (error, req, res, next) => {
         errorResponse.details = details;
     }
     // Add stack trace in development mode
-    if (process.env.NODE_ENV === 'development' && error.stack) {
+    if (process.env.NODE_ENV === 'development' && error && typeof error === 'object' && 'stack' in error) {
         errorResponse.details = {
-            ...errorResponse.details,
+            ...(typeof errorResponse.details === 'object' ? errorResponse.details : {}),
             stack: error.stack,
         };
     }

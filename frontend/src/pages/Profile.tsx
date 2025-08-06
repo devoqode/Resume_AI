@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import ProfileVoiceInterviewDialog from "@/components/ProfileVoiceInterviewDialog";
+import AIInterviewDialog from "@/components/AIInterviewDialog";
 import { ChevronDown, Mic, MapPin, User, Target, ChevronUp, Volume2, Sparkles } from "lucide-react";
 
 export default function Profile() {
@@ -379,9 +379,9 @@ export default function Profile() {
       </div>
       
       {/* Enhanced Voice Interview Dialog */}
-      <ProfileVoiceInterviewDialog 
-        isOpen={showVoiceDialog}
-        onClose={() => setShowVoiceDialog(false)}
+      <AIInterviewDialog 
+        open={showVoiceDialog}
+        onOpenChange={setShowVoiceDialog}
       />
     </div>
   );
