@@ -359,15 +359,6 @@ app.use(errorHandler);
 // Initialize database and start server
 async function startServer() {
   try {
-    // Validate required API keys
-    if (config.openai.apiKey === 'your_openai_api_key_here') {
-      console.warn('⚠️  Warning: OpenAI API key not configured. Set OPENAI_API_KEY environment variable.');
-    }
-    
-    if (config.elevenlabs.apiKey === 'your_elevenlabs_api_key_here') {
-      console.warn('⚠️  Warning: ElevenLabs API key not configured. Set ELEVENLABS_API_KEY environment variable.');
-    }
-
     // Initialize Prisma database connection
     await prisma.$connect();
     console.log('✅ Database connected successfully');
