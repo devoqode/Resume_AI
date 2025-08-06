@@ -34,13 +34,18 @@ const Index = () => {
             <Button 
               size="lg" 
               className="bg-gradient-primary hover:opacity-90 text-lg px-8"
-              onClick={() => navigate("/beta-onboarding")}
+              onClick={() => navigate("/signup")}
             >
-              Start Beta Onboarding
+              Get Started Free
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8">
-              Learn More
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="text-lg px-8"
+              onClick={() => navigate("/login")}
+            >
+              Sign In
             </Button>
           </div>
         </div>
@@ -192,7 +197,7 @@ const Index = () => {
           <Button 
             size="lg" 
             className="bg-gradient-primary hover:opacity-90 text-lg px-8"
-            onClick={() => navigate("/beta-onboarding")}
+            onClick={() => navigate("/signup")}
           >
             Start Free Beta
             <ArrowRight className="w-5 h-5 ml-2" />

@@ -1,26 +1,35 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, FileText, CheckCircle } from "lucide-react";
+import { Upload, FileText, CheckCircle, Loader2 } from "lucide-react";
+import { useUploadResume, useAuth } from "@/hooks/useApi";
 import { useToast } from "@/hooks/use-toast";
+import type { Resume } from "@/lib/api";
 
 interface FileUploadProps {
   onFileSelect?: (file: File) => void;
+  onUploadComplete?: (resume: Resume) => void;
   acceptedFileTypes?: string;
   maxFileSize?: number; // in MB
+  autoUpload?: boolean; // If true, uploads immediately after file selection
 }
 
 export default function FileUpload({ 
-  onFileSelect, 
+  onFileSelect,
+  onUploadComplete,
   acceptedFileTypes = ".pdf,.doc,.docx",
-  maxFileSize = 10 
+  maxFileSize = 10,
+  autoUpload = false
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isUploaded, setIsUploaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const uploadResume = useUploadResume();
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     // Validate file type
     const allowedTypes = acceptedFileTypes.split(',').map(type => type.trim());
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -45,12 +54,42 @@ export default function FileUpload({
     }
 
     setUploadedFile(file);
+    setIsUploaded(false);
     onFileSelect?.(file);
+
+    if (autoUpload && user) {
+      handleUpload(file);
+    } else {
+      toast({
+        title: "File selected",
+        description: `${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+      });
+    }
+  };
+
+  const handleUpload = async (file?: File) => {
+    const fileToUpload = file || uploadedFile;
     
-    toast({
-      title: "File uploaded successfully",
-      description: `${file.name} is ready for processing`,
-    });
+    if (!fileToUpload || !user) {
+      toast({
+        title: "Upload Error",
+        description: "Please select a file and ensure you're logged in",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    uploadResume.mutate(
+      { file: fileToUpload, userId: user.id },
+      {
+        onSuccess: (response) => {
+          if (response.success && response.data) {
+            setIsUploaded(true);
+            onUploadComplete?.(response.data);
+          }
+        },
+      }
+    );
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -109,11 +148,27 @@ export default function FileUpload({
           onDrop={handleDrop}
           onClick={openFileDialog}
         >
-          {uploadedFile ? (
+          {uploadResume.isPending ? (
             <div className="space-y-3">
-              <CheckCircle className="w-12 h-12 mx-auto text-success" />
+              <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
               <div>
-                <p className="font-medium text-success">File uploaded successfully</p>
+                <p className="font-medium text-primary">Uploading and analyzing resume...</p>
+                <p className="text-sm text-muted-foreground">
+                  AI is extracting your skills and experience
+                </p>
+              </div>
+            </div>
+          ) : uploadedFile ? (
+            <div className="space-y-3">
+              {isUploaded ? (
+                <CheckCircle className="w-12 h-12 mx-auto text-success" />
+              ) : (
+                <FileText className="w-12 h-12 mx-auto text-blue-500" />
+              )}
+              <div>
+                <p className="font-medium text-success">
+                  {isUploaded ? "File uploaded and analyzed successfully" : "File selected"}
+                </p>
                 <p className="text-sm text-muted-foreground">{uploadedFile.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
@@ -133,15 +188,32 @@ export default function FileUpload({
           )}
         </div>
 
-        {/* Choose File Button */}
-        <div className="text-center">
+        {/* File Actions */}
+        <div className="flex gap-3 justify-center">
           <Button 
             onClick={openFileDialog}
-            className="bg-gradient-primary hover:opacity-90"
-            size="lg"
+            variant="outline"
+            disabled={uploadResume.isPending}
           >
-            Choose File
+            {uploadedFile ? 'Choose Different File' : 'Choose File'}
           </Button>
+          
+          {uploadedFile && !autoUpload && !isUploaded && (
+            <Button 
+              onClick={() => handleUpload()}
+              className="bg-gradient-primary hover:opacity-90"
+              disabled={uploadResume.isPending}
+            >
+              {uploadResume.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                'Upload & Analyze'
+              )}
+            </Button>
+          )}
         </div>
 
         <input

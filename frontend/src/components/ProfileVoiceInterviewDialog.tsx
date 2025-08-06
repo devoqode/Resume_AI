@@ -66,7 +66,7 @@ export default function ProfileVoiceInterviewDialog({ isOpen, onClose }: Profile
       }, 2500 + Math.random() * 2000);
       return () => clearTimeout(timer);
     }
-  }, [isRecording, transcript.length]);
+  }, [isRecording, transcript.length, mockTranscript]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

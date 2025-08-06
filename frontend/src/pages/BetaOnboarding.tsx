@@ -17,7 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileText, Briefcase, Target, ChevronUp, ChevronDown } from "lucide-react";
+import { useAuth, useResumes } from "@/hooks/useApi";
 import { useToast } from "@/hooks/use-toast";
+import type { Resume } from "@/lib/api";
 
 const TOTAL_STEPS = 5;
 
@@ -60,6 +62,8 @@ export default function BetaOnboarding() {
   const [showWorkStyleDialog, setShowWorkStyleDialog] = useState(false);
   const [sortColumn, setSortColumn] = useState<'years' | 'lastUsed' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const { user } = useAuth();
+  const { data: resumes } = useResumes(user?.id || '');
   const [data, setData] = useState<OnboardingData>({
     personalInfo: {
       firstName: "",
@@ -141,7 +145,7 @@ export default function BetaOnboarding() {
     }));
   };
 
-  const updateWorkStyle = (field: keyof OnboardingData['workStyle'], value: any) => {
+  const updateWorkStyle = (field: keyof OnboardingData['workStyle'], value: string | string[]) => {
     setData(prev => ({
       ...prev,
       workStyle: {
@@ -233,7 +237,25 @@ export default function BetaOnboarding() {
               </p>
             </div>
             <FileUpload
-              onFileSelect={(file) => setData(prev => ({ ...prev, resume: file }))}
+              onFileSelect={(file) => setData(prev => ({ ...prev, resumeFile: file }))}
+              onUploadComplete={(resume) => {
+                setData(prev => ({ 
+                  ...prev, 
+                  resume,
+                  personalInfo: {
+                    ...prev.personalInfo,
+                    firstName: resume.parsedData?.name?.split(' ')[0] || prev.personalInfo.firstName,
+                    lastName: resume.parsedData?.name?.split(' ').slice(1).join(' ') || prev.personalInfo.lastName,
+                    email: resume.parsedData?.email || prev.personalInfo.email,
+                    phone: resume.parsedData?.phone || prev.personalInfo.phone,
+                  }
+                }));
+                toast({
+                  title: "Resume Analyzed Successfully!",
+                  description: "AI has extracted your information and we've pre-filled some fields for you.",
+                });
+              }}
+              autoUpload={true}
             />
           </div>
         );

@@ -1,304 +1,488 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Mic, MicOff, Play, Pause, FileText, Clock, Target, TrendingUp } from "lucide-react";
-
-interface Job {
-  title: string;
-  company: string;
-  duration: string;
-  location: string;
-  description: string;
-  skills: string[];
-  software: string[];
-}
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  useStartInterview, 
+  useSubmitResponse, 
+  useCompleteInterview,
+  useInterviewSession,
+  useRealTimeTranscript,
+  useTextToSpeech,
+  useAuth,
+} from "@/hooks/useApi";
+import { 
+  Mic, 
+  MicOff, 
+  Volume2, 
+  VolumeX, 
+  Play, 
+  Pause, 
+  Square, 
+  CheckCircle, 
+  Clock,
+  AlertCircle,
+  Loader2
+} from "lucide-react";
+import type { Resume } from "@/lib/api";
 
 interface AIInterviewDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  job: Job;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  resume?: Resume;
+  voiceId?: string;
 }
 
-type InterviewStage = 'initial' | 'recording' | 'brief';
+type InterviewStage = 'initial' | 'recording' | 'processing' | 'completed';
 
-export default function AIInterviewDialog({ isOpen, onClose, job }: AIInterviewDialogProps) {
+export default function AIInterviewDialog({ 
+  open, 
+  onOpenChange, 
+  resume,
+  voiceId = 'pNInz6obpgDQGcFmaJgB' // Default voice
+}: AIInterviewDialogProps) {
   const [stage, setStage] = useState<InterviewStage>('initial');
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState<string[]>([]);
-  const [showTranscriptDialog, setShowTranscriptDialog] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [audioVolume, setAudioVolume] = useState(true);
 
-  // Mock transcript data
-  const mockTranscript = [
-    "AI: Hi! I'm excited to learn more about your experience as a Senior Software Engineer at AeroSpace Dynamics. Can you tell me about a challenging project you worked on?",
-    "You: Sure! I worked on developing a real-time flight control system that required handling massive amounts of sensor data with microsecond precision.",
-    "AI: That sounds impressive! What programming languages and technologies did you use for this project?",
-    "You: I primarily used C++ for the core system due to its performance requirements, and Python for the data analysis components. We also used embedded systems programming.",
-    "AI: Excellent! How did you ensure the reliability and safety of the flight control system?",
-    "You: We implemented multiple redundancy layers, extensive unit testing, and used formal verification methods to prove the correctness of critical algorithms."
-  ];
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const timerRef = useRef<NodeJS.Timeout>();
+  
+  const { user } = useAuth();
+  const startInterview = useStartInterview();
+  const submitResponse = useSubmitResponse();
+  const completeInterview = useCompleteInterview();
+  const generateSpeech = useTextToSpeech();
+  
+  // Get interview session data
+  const { data: session, isLoading: sessionLoading } = useInterviewSession(sessionId || '');
+  
+  // Real-time transcript
+  const {
+    transcript,
+    isListening,
+    startListening,
+    stopListening,
+    resetTranscript,
+    isSupported: speechSupported
+  } = useRealTimeTranscript();
 
-  // Timer effect for recording
+  // Timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setCurrentTime(prev => prev + 1);
+    if (stage === 'recording') {
+      timerRef.current = setInterval(() => {
+        setTimeElapsed(prev => prev + 1);
       }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     }
-    return () => clearInterval(interval);
-  }, [isRecording]);
 
-  // Mock transcript update during recording
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [stage]);
+
+  // Audio playback handling
   useEffect(() => {
-    if (isRecording && transcript.length < mockTranscript.length) {
-      const timer = setTimeout(() => {
-        setTranscript(prev => [...prev, mockTranscript[prev.length]]);
-      }, 3000 + Math.random() * 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isRecording, transcript.length]);
+    const audio = audioRef.current;
+    if (!audio) return;
 
-  const formatTime = (seconds: number) => {
+    const handleEnded = () => {
+      setAudioPlaying(false);
+    };
+
+    const handleCanPlay = () => {
+      if (audioPlaying) {
+        audio.play();
+      }
+    };
+
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('canplay', handleCanPlay);
+
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('canplay', handleCanPlay);
+    };
+  }, [audioPlaying]);
+
+  // Format time display
+  const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleStartInterview = () => {
-    setStage('recording');
-    setIsRecording(true);
-    setTranscript([]);
-    setCurrentTime(0);
+  // Start interview
+  const handleStartInterview = async () => {
+    if (!resume || !user) return;
+
+    startInterview.mutate({
+      userId: user.id,
+      resumeId: resume.id,
+      voiceId
+    }, {
+      onSuccess: (response) => {
+        if (response.success && response.data) {
+          setSessionId(response.data.id);
+          setStage('recording');
+          // Generate speech for first question
+          generateFirstQuestionSpeech(response.data.questions[0].questionText);
+        }
+      }
+    });
   };
 
-  const handleCompleteInterview = () => {
-    setIsRecording(false);
-    setStage('brief');
+  // Generate speech for question
+  const generateFirstQuestionSpeech = async (questionText: string) => {
+    generateSpeech.mutate({
+      text: questionText,
+      voiceId
+    }, {
+      onSuccess: (response) => {
+        if (response.success && response.data) {
+          const audioBlob = response.data as Blob;
+          const audioUrl = URL.createObjectURL(audioBlob);
+          setCurrentAudioUrl(audioUrl);
+          setAudioPlaying(true);
+        }
+      }
+    });
   };
 
+  // Handle audio control
+  const toggleAudio = () => {
+    const audio = audioRef.current;
+    if (!audio || !currentAudioUrl) return;
+
+    if (audioPlaying) {
+      audio.pause();
+      setAudioPlaying(false);
+    } else {
+      audio.play();
+      setAudioPlaying(true);
+    }
+  };
+
+  // Start recording response
+  const handleStartRecording = () => {
+    resetTranscript();
+    setTimeElapsed(0);
+    startListening();
+  };
+
+  // Stop recording and submit response
+  const handleStopRecording = async () => {
+    stopListening();
+    
+    if (!sessionId || !session || !transcript.trim()) return;
+
+    setStage('processing');
+    
+    const currentQuestion = session.questions[currentQuestionIndex];
+    
+    submitResponse.mutate({
+      sessionId,
+      questionId: currentQuestion.id,
+      transcription: transcript.trim()
+    }, {
+      onSuccess: () => {
+        // Move to next question or complete
+        const nextIndex = currentQuestionIndex + 1;
+        if (nextIndex < session.totalQuestions) {
+          setCurrentQuestionIndex(nextIndex);
+          setStage('recording');
+          setTimeElapsed(0);
+          // Generate speech for next question
+          generateFirstQuestionSpeech(session.questions[nextIndex].questionText);
+        } else {
+          // Interview complete
+          completeInterview.mutate(sessionId, {
+            onSuccess: () => {
+              setStage('completed');
+            }
+          });
+        }
+      }
+    });
+  };
+
+  // Close dialog and reset
   const handleClose = () => {
     setStage('initial');
-    setIsRecording(false);
-    setTranscript([]);
-    setCurrentTime(0);
-    onClose();
+    setCurrentQuestionIndex(0);
+    setSessionId(null);
+    setCurrentAudioUrl(null);
+    setAudioPlaying(false);
+    setTimeElapsed(0);
+    resetTranscript();
+    stopListening();
+    onOpenChange(false);
   };
 
-  const renderInitialStage = () => (
-    <div className="space-y-6">
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-          <Mic className="w-8 h-8 text-primary" />
-        </div>
-        <div>
-          <h3 className="text-xl font-semibold mb-2">AI Interview: {job.title}</h3>
-          <p className="text-muted-foreground">{job.company} • {job.duration}</p>
-        </div>
-      </div>
-
-      <Card className="p-4 bg-muted/50">
-        <h4 className="font-medium mb-2">What to expect:</h4>
-        <ul className="text-sm text-muted-foreground space-y-1">
-          <li>• 5-10 minute conversation about your role</li>
-          <li>• Questions about your achievements and challenges</li>
-          <li>• Discussion of technical skills and tools used</li>
-          <li>• No wrong answers - just be yourself!</li>
-        </ul>
-      </Card>
-
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={handleClose} className="flex-1">
-          Cancel
-        </Button>
-        <Button onClick={handleStartInterview} className="flex-1 bg-gradient-primary">
-          Start Interview
-        </Button>
-      </div>
-    </div>
-  );
-
-  const renderRecordingStage = () => (
-    <div className="space-y-6">
-      <div className="text-center space-y-4">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto transition-colors ${
-          isRecording ? 'bg-red-100 animate-pulse' : 'bg-muted'
-        }`}>
-          {isRecording ? (
-            <Mic className="w-8 h-8 text-red-600" />
-          ) : (
-            <MicOff className="w-8 h-8 text-muted-foreground" />
-          )}
-        </div>
-        <div>
-          <h3 className="text-xl font-semibold">AI Interview in Progress</h3>
-          <p className="text-lg font-mono">{formatTime(currentTime)}</p>
-        </div>
-      </div>
-
-      <Card className="p-4 max-h-80 overflow-y-auto">
-        <h4 className="font-medium mb-3 flex items-center gap-2">
-          <FileText className="w-4 h-4" />
-          Live Transcript
-        </h4>
-        <div className="space-y-3">
-          {transcript.map((message, index) => (
-            <div key={index} className={`text-sm ${
-              message.startsWith('AI:') ? 'text-primary' : 'text-foreground'
-            }`}>
-              {message}
-            </div>
-          ))}
-          {isRecording && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
-              <span className="text-sm">Listening...</span>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <div className="flex gap-3">
-        <Button 
-          variant="outline" 
-          onClick={() => setIsRecording(!isRecording)}
-          className="flex-1"
-        >
-          {isRecording ? (
-            <>
-              <Pause className="w-4 h-4 mr-2" />
-              Pause
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 mr-2" />
-              Resume
-            </>
-          )}
-        </Button>
-        <Button 
-          onClick={handleCompleteInterview}
-          className="flex-1 bg-gradient-primary"
-          disabled={transcript.length < 3}
-        >
-          Complete Interview
-        </Button>
-      </div>
-    </div>
-  );
-
-  const renderBriefStage = () => (
-    <div className="space-y-6">
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-          <Target className="w-8 h-8 text-green-600" />
-        </div>
-        <div>
-          <h3 className="text-xl font-semibold">Interview Complete!</h3>
-          <p className="text-muted-foreground">Here's what we discovered about your experience</p>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <h4 className="font-medium">Key Achievements Identified</h4>
-          </div>
-          <ul className="text-sm space-y-1">
-            <li>• Developed real-time flight control system with microsecond precision</li>
-            <li>• Implemented multiple redundancy layers for safety-critical systems</li>
-            <li>• Used formal verification methods for algorithm correctness</li>
-            <li>• Led performance optimization resulting in 40% efficiency improvement</li>
-          </ul>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-primary" />
-            <h4 className="font-medium">Interview Summary</h4>
-          </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground">Duration:</span>
-              <p className="font-medium">{formatTime(currentTime)}</p>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Questions Asked:</span>
-              <p className="font-medium">6</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="flex gap-3">
-        <Button 
-          variant="outline" 
-          onClick={() => setShowTranscriptDialog(true)}
-          className="flex-1"
-        >
-          View Transcript
-        </Button>
-        <Button onClick={handleClose} className="flex-1 bg-gradient-primary">
-          Done
-        </Button>
-      </div>
-    </div>
-  );
+  // Get current question
+  const currentQuestion = session?.questions[currentQuestionIndex];
+  const progress = session ? ((currentQuestionIndex + 1) / session.totalQuestions) * 100 : 0;
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="sr-only">AI Interview</DialogTitle>
-          </DialogHeader>
-          {stage === 'initial' && renderInitialStage()}
-          {stage === 'recording' && renderRecordingStage()}
-          {stage === 'brief' && renderBriefStage()}
-        </DialogContent>
-      </Dialog>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mic className="w-5 h-5" />
+            AI Interview Session
+          </DialogTitle>
+          <DialogDescription>
+            {stage === 'initial' && 'AI will ask you 5 questions based on your resume. Answer naturally.'}
+            {stage === 'recording' && 'Listen to the question and provide your answer when ready.'}
+            {stage === 'processing' && 'Processing your response and generating feedback...'}
+            {stage === 'completed' && 'Interview completed! View your results below.'}
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Transcript Dialog */}
-      <Dialog open={showTranscriptDialog} onOpenChange={setShowTranscriptDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Interview Transcript</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 overflow-y-auto">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span>Duration: {formatTime(currentTime)}</span>
-              <Separator orientation="vertical" className="h-4" />
-              <span>{job.title} at {job.company}</span>
+        <div className="flex-1 overflow-hidden flex flex-col gap-6">
+          {/* Progress */}
+          {session && (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">
+                  Question {currentQuestionIndex + 1} of {session.totalQuestions}
+                </span>
+                <Badge variant="outline">
+                  {formatTime(timeElapsed)}
+                </Badge>
+              </div>
+              <Progress value={progress} className="h-2" />
             </div>
-            <Separator />
-            <div className="space-y-4">
-              {transcript.map((message, index) => (
-                <div key={index} className={`p-3 rounded-lg ${
-                  message.startsWith('AI:') 
-                    ? 'bg-primary/5 border-l-4 border-primary' 
-                    : 'bg-muted/50 border-l-4 border-muted-foreground'
-                }`}>
-                  <div className="text-sm font-medium mb-1">
-                    {message.startsWith('AI:') ? 'AI Interviewer' : 'You'}
-                  </div>
-                  <div className="text-sm">
-                    {message.replace(/^(AI:|You:)\s*/, '')}
+          )}
+
+          {/* Initial Stage */}
+          {stage === 'initial' && (
+            <Card className="p-6 text-center space-y-4">
+              <div className="space-y-2">
+                <Mic className="w-12 h-12 mx-auto text-primary" />
+                <h3 className="text-lg font-semibold">Ready to Start Your Interview?</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  The AI will analyze your resume and ask personalized questions. 
+                  Make sure your microphone is working and you're in a quiet environment.
+                </p>
+              </div>
+
+              {!speechSupported && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-yellow-800">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm">
+                      Speech recognition not supported in this browser. You'll need to type your responses.
+                    </span>
                   </div>
                 </div>
-              ))}
+              )}
+
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  onClick={handleClose}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleStartInterview}
+                  disabled={startInterview.isPending}
+                  className="bg-gradient-primary hover:opacity-90"
+                >
+                  {startInterview.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    'Start Interview'
+                  )}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Recording Stage */}
+          {stage === 'recording' && currentQuestion && (
+            <div className="space-y-6">
+              {/* Question Card */}
+              <Card className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Current Question</h3>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAudioVolume(!audioVolume)}
+                      >
+                        {audioVolume ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                      </Button>
+                      
+                      {currentAudioUrl && (
+                        <Button
+                          size="sm"
+                          onClick={toggleAudio}
+                          disabled={generateSpeech.isPending}
+                        >
+                          {generateSpeech.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : audioPlaying ? (
+                            <Pause className="w-4 h-4" />
+                          ) : (
+                            <Play className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <p className="text-lg leading-relaxed">{currentQuestion.questionText}</p>
+                  
+                  {currentAudioUrl && (
+                    <audio 
+                      ref={audioRef}
+                      src={currentAudioUrl}
+                      muted={!audioVolume}
+                      preload="auto"
+                    />
+                  )}
+                </div>
+              </Card>
+
+              {/* Response Area */}
+              <Card className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Your Response</h3>
+                    <div className="flex items-center gap-2">
+                      {isListening && (
+                        <Badge variant="destructive" className="animate-pulse">
+                          <Mic className="w-3 h-3 mr-1" />
+                          Recording...
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Transcript Display */}
+                  <ScrollArea className="h-32 border rounded-lg p-4 bg-muted/30">
+                    {transcript ? (
+                      <p className="text-sm leading-relaxed">{transcript}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        {isListening ? 'Listening... Speak clearly into your microphone.' : 'Click "Start Recording" to begin your response.'}
+                      </p>
+                    )}
+                  </ScrollArea>
+
+                  {/* Recording Controls */}
+                  <div className="flex gap-3 justify-center">
+                    {!isListening ? (
+                      <Button 
+                        onClick={handleStartRecording}
+                        className="bg-red-500 hover:bg-red-600 text-white"
+                        disabled={!speechSupported}
+                      >
+                        <Mic className="w-4 h-4 mr-2" />
+                        Start Recording
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleStopRecording}
+                        disabled={!transcript.trim() || submitResponse.isPending}
+                        className="bg-gradient-primary hover:opacity-90"
+                      >
+                        {submitResponse.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Square className="w-4 h-4 mr-2" />
+                            Submit Answer
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Processing Stage */}
+          {stage === 'processing' && (
+            <Card className="p-8 text-center space-y-4">
+              <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+              <div>
+                <h3 className="text-lg font-semibold">Analyzing Your Response</h3>
+                <p className="text-muted-foreground">
+                  Our AI is evaluating your answer and preparing the next question...
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* Completed Stage */}
+          {stage === 'completed' && session && (
+            <Card className="p-6 text-center space-y-4">
+              <CheckCircle className="w-12 h-12 mx-auto text-success" />
+              <div>
+                <h3 className="text-lg font-semibold">Interview Completed!</h3>
+                <p className="text-muted-foreground">
+                  You've successfully completed all {session.totalQuestions} questions.
+                </p>
+                {session.overallScore && (
+                  <div className="mt-4 p-4 bg-primary/5 rounded-lg">
+                    <div className="text-2xl font-bold text-primary">
+                      {Math.round(session.overallScore)}%
+                    </div>
+                    <p className="text-sm text-muted-foreground">Overall Score</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex gap-3 justify-center">
+                <Button onClick={handleClose}>
+                  Close
+                </Button>
+                <Button 
+                  onClick={() => {/* Navigate to results */}}
+                  className="bg-gradient-primary hover:opacity-90"
+                >
+                  View Detailed Results
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Loading overlay */}
+        {(sessionLoading || startInterview.isPending) && stage !== 'initial' && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="text-center space-y-2">
+              <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
+              <p className="text-sm text-muted-foreground">Loading interview session...</p>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
