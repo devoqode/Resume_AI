@@ -102,7 +102,7 @@ const rateLimit = (req: express.Request, res: express.Response, next: express.Ne
 app.use(rateLimit);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (req: any, res: any) => {
   res.json({
     success: true,
     message: 'AI Interview Backend is running',
@@ -116,7 +116,7 @@ app.get('/health', (req, res) => {
 });
 
 // Authentication endpoints (for testing)
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', async (req: any, res: any) => {
   try {
     const { firstName, lastName, email, password } = req.body;
 
@@ -175,7 +175,7 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', async (req: any, res: any) => {
   try {
     const { email, password } = req.body;
 
@@ -232,7 +232,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Create test user endpoint (development only)
-app.post('/api/auth/create-test-user', async (req, res) => {
+app.post('/api/auth/create-test-user', async (req: any, res: any) => {
   if (config.nodeEnv !== 'development' && !config.auth.bypassAuth) {
     return res.status(403).json({
       success: false,
@@ -294,7 +294,7 @@ app.use('/api/voice', createVoiceRoutes(
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
-  setHeaders: (res, path) => {
+  setHeaders: (res: any, path: any) => {
     if (path.endsWith('.mp3') || path.endsWith('.wav')) {
       res.setHeader('Content-Type', 'audio/mpeg');
     }
@@ -302,7 +302,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
 }));
 
 // API documentation endpoint
-app.get('/api', (req, res) => {
+app.get('/api', (req: any, res: any) => {
   res.json({
     success: true,
     message: 'AI Interview Web Application API',

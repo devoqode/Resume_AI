@@ -6,6 +6,12 @@ import 'multer';
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
+  body: any;
+  params: any;
+  query: any;
+  file?: Express.Multer.File;
+  files?: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
+  headers: any;
 }
 
 export interface User {

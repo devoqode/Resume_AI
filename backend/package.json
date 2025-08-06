@@ -4,10 +4,15 @@
   "description": "AI Interview Web Application Backend with OpenAI and ElevenLabs integration",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npm install && prisma generate && tsc",
     "start": "node dist/index.js",
+    "postinstall": "prisma generate",
     "dev": "nodemon --exec ts-node src/index.ts",
     "dev:watch": "nodemon --watch 'src/**/*.ts' --exec ts-node src/index.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:reset": "prisma migrate reset",
+    "db:studio": "prisma studio",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -21,6 +26,7 @@
   "license": "ISC",
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.8.0",
+    "@prisma/client": "^6.13.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "docx": "^9.5.1",
@@ -33,6 +39,7 @@
     "multer": "^2.0.2",
     "openai": "^5.12.0",
     "pdf-parse": "^1.1.1",
+    "prisma": "^6.13.0",
     "sqlite3": "^5.1.7",
     "uuid": "^11.1.0"
   },

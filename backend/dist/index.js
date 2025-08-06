@@ -10,7 +10,7 @@ const morgan_1 = __importDefault(require("morgan"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const config_1 = require("./config");
-const database_1 = require("./models/database");
+const prisma_1 = __importDefault(require("./lib/prisma"));
 const resume_routes_1 = require("./routes/resume.routes");
 const interview_routes_1 = require("./routes/interview.routes");
 const voice_routes_1 = require("./routes/voice.routes");
@@ -114,10 +114,11 @@ app.post('/api/auth/signup', async (req, res) => {
                 error: 'Missing required fields: firstName, lastName, email, password',
             });
         }
-        const db = (0, database_1.getDatabase)();
         const userId = (0, uuid_1.v4)();
         // Check if user already exists
-        const existingUser = await db.get('SELECT id FROM users WHERE email = ?', [email]);
+        const existingUser = await prisma_1.default.user.findUnique({
+            where: { email }
+        });
         if (existingUser) {
             return res.status(409).json({
                 success: false,
@@ -125,17 +126,25 @@ app.post('/api/auth/signup', async (req, res) => {
             });
         }
         // Create user (in production, hash the password)
-        await db.run('INSERT INTO users (id, email, first_name, last_name, phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, datetime("now"), datetime("now"))', [userId, email, firstName, lastName, null]);
+        const user = await prisma_1.default.user.create({
+            data: {
+                id: userId,
+                email,
+                firstName,
+                lastName,
+                phone: null
+            }
+        });
         // Generate JWT token
         const token = (0, auth_middleware_1.generateToken)(userId, email, config_1.config.jwt.secret);
         res.status(201).json({
             success: true,
             data: {
                 user: {
-                    id: userId,
-                    email,
-                    firstName,
-                    lastName,
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
                 },
                 token,
             },
@@ -158,9 +167,16 @@ app.post('/api/auth/login', async (req, res) => {
                 error: 'Email and password are required',
             });
         }
-        const db = (0, database_1.getDatabase)();
         // Find user by email
-        const user = await db.get('SELECT id, email, first_name, last_name FROM users WHERE email = ?', [email]);
+        const user = await prisma_1.default.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true
+            }
+        });
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -177,8 +193,8 @@ app.post('/api/auth/login', async (req, res) => {
                 user: {
                     id: user.id,
                     email: user.email,
-                    firstName: user.first_name,
-                    lastName: user.last_name,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
                 },
                 token,
             },
@@ -201,10 +217,11 @@ app.post('/api/auth/create-test-user', async (req, res) => {
         });
     }
     try {
-        const db = (0, database_1.getDatabase)();
         const testUser = config_1.config.auth.testUser;
         // Check if test user already exists
-        const existingUser = await db.get('SELECT id FROM users WHERE id = ?', [testUser.id]);
+        const existingUser = await prisma_1.default.user.findUnique({
+            where: { id: testUser.id }
+        });
         if (existingUser) {
             return res.json({
                 success: true,
@@ -213,7 +230,14 @@ app.post('/api/auth/create-test-user', async (req, res) => {
             });
         }
         // Create test user
-        await db.run('INSERT INTO users (id, email, first_name, last_name, created_at, updated_at) VALUES (?, ?, ?, ?, datetime("now"), datetime("now"))', [testUser.id, testUser.email, testUser.firstName, testUser.lastName]);
+        await prisma_1.default.user.create({
+            data: {
+                id: testUser.id,
+                email: testUser.email,
+                firstName: testUser.firstName,
+                lastName: testUser.lastName
+            }
+        });
         res.json({
             success: true,
             message: 'Test user created successfully',
@@ -303,10 +327,9 @@ async function startServer() {
         if (config_1.config.elevenlabs.apiKey === 'your_elevenlabs_api_key_here') {
             console.warn('⚠️  Warning: ElevenLabs API key not configured. Set ELEVENLABS_API_KEY environment variable.');
         }
-        // Initialize database (using SQLite for development)
-        const db = (0, database_1.getDatabase)(config_1.config.database.sqlite.path);
-        await db.initialize();
-        console.log('✅ Database initialized successfully');
+        // Initialize Prisma database connection
+        await prisma_1.default.$connect();
+        console.log('✅ Database connected successfully');
         // Start server
         const server = app.listen(config_1.config.port, () => {
             console.log(`🚀 AI Interview Backend running on port ${config_1.config.port}`);
@@ -323,7 +346,7 @@ async function startServer() {
             server.close(async () => {
                 console.log('📴 HTTP server closed');
                 try {
-                    await db.close();
+                    await prisma_1.default.$disconnect();
                     console.log('🗃️  Database connection closed');
                 }
                 catch (error) {
