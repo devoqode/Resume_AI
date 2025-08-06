@@ -4,6 +4,7 @@ import fs from 'fs';
 import { ElevenLabsService } from '../services/elevenlabs.service';
 import { WhisperService } from '../services/whisper.service';
 import { AuthenticatedRequest } from '../types';
+import { logger } from '../utils/logger';
 
 export class VoiceController {
   private elevenLabsService: ElevenLabsService;
@@ -57,7 +58,7 @@ export class VoiceController {
 
       res.send(audioBuffer);
     } catch (error) {
-      console.error('Error in text-to-speech:', error);
+      logger.error('Error in text-to-speech:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Text-to-speech conversion failed',
@@ -99,7 +100,7 @@ export class VoiceController {
         },
       });
     } catch (error) {
-      console.error('Error in text-to-speech file generation:', error);
+      logger.error('Error in text-to-speech file generation:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Text-to-speech file generation failed',
@@ -150,7 +151,7 @@ export class VoiceController {
         },
       });
     } catch (error) {
-      console.error('Error in speech-to-text:', error);
+      logger.error('Error in speech-to-text:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Speech-to-text conversion failed',
@@ -205,7 +206,7 @@ export class VoiceController {
         },
       });
     } catch (error) {
-      console.error('Error in verbose speech-to-text:', error);
+      logger.error('Error in verbose speech-to-text:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Verbose speech-to-text conversion failed',
@@ -225,7 +226,7 @@ export class VoiceController {
         data: voices,
       });
     } catch (error) {
-      console.error('Error fetching voices:', error);
+      logger.error('Error fetching voices:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch voices',
@@ -255,7 +256,7 @@ export class VoiceController {
         data: voice,
       });
     } catch (error) {
-      console.error('Error fetching voice details:', error);
+      logger.error('Error fetching voice details:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch voice details',
@@ -285,7 +286,7 @@ export class VoiceController {
         data: settings,
       });
     } catch (error) {
-      console.error('Error fetching voice settings:', error);
+      logger.error('Error fetching voice settings:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch voice settings',
@@ -321,7 +322,7 @@ export class VoiceController {
         message: 'Voice settings updated successfully',
       });
     } catch (error) {
-      console.error('Error updating voice settings:', error);
+      logger.error('Error updating voice settings:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to update voice settings',
@@ -377,7 +378,7 @@ export class VoiceController {
         fs.createReadStream(audioPath).pipe(res);
       }
     } catch (error) {
-      console.error('Error serving audio file:', error);
+      logger.error('Error serving audio file:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to serve audio file',
@@ -404,7 +405,7 @@ export class VoiceController {
         },
       });
     } catch (error) {
-      console.error('Error fetching audio requirements:', error);
+      logger.error('Error fetching audio requirements:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch audio requirements',
@@ -424,7 +425,7 @@ export class VoiceController {
         data: userInfo,
       });
     } catch (error) {
-      console.error('Error fetching user info:', error);
+      logger.error('Error fetching user info:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch user info',

@@ -4,7 +4,8 @@ import { getDatabase } from '../models/database';
 import { OpenAIService } from '../services/openai.service';
 import { ElevenLabsService } from '../services/elevenlabs.service';
 import { WhisperService } from '../services/whisper.service';
-import { InterviewSession, InterviewQuestion, InterviewResponse, ParsedResumeData, AIEvaluation, AuthenticatedRequest } from '../types';
+import { ParsedResumeData, AIEvaluation, AuthenticatedRequest } from '../types';
+import { logger } from '../utils/logger';
 
 export class InterviewController {
   private openaiService: OpenAIService;
@@ -107,7 +108,7 @@ export class InterviewController {
         },
       });
     } catch (error) {
-      console.error('Error starting interview:', error);
+      logger.error('Error starting interview:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to start interview',
@@ -246,7 +247,7 @@ export class InterviewController {
         },
       });
     } catch (error) {
-      console.error('Error submitting response:', error);
+      logger.error('Error submitting response:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to submit response',
@@ -355,7 +356,7 @@ export class InterviewController {
         data: results,
       });
     } catch (error) {
-      console.error('Error completing interview:', error);
+      logger.error('Error completing interview:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to complete interview',
@@ -439,7 +440,7 @@ export class InterviewController {
         },
       });
     } catch (error) {
-      console.error('Error fetching interview:', error);
+      logger.error('Error fetching interview:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch interview details',
@@ -509,7 +510,7 @@ export class InterviewController {
         })),
       });
     } catch (error) {
-      console.error('Error fetching interviews:', error);
+      logger.error('Error fetching interviews:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch interviews',
@@ -557,7 +558,7 @@ export class InterviewController {
         message: 'Interview session deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting interview:', error);
+      logger.error('Error deleting interview:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete interview session',

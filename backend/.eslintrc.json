@@ -1,0 +1,53 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    // TypeScript specific rules
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-non-null-assertion": "warn",
+
+    // General JavaScript rules
+    "no-console": "warn",
+    "no-debugger": "error",
+    "prefer-const": "error",
+    "no-var": "error",
+    "eqeqeq": ["error", "always"],
+    "curly": ["error", "all"],
+
+    // Node.js specific
+    "no-process-exit": "error",
+    "handle-callback-err": "error",
+
+    // Code quality
+    "complexity": ["warn", 10],
+    "max-depth": ["warn", 4],
+    "max-lines-per-function": ["warn", 50],
+    "no-duplicate-imports": "error",
+    "no-unreachable": "error",
+    "consistent-return": "error"
+  },
+  "ignorePatterns": [
+    "dist/",
+    "node_modules/",
+    "*.js",
+    "*.d.ts",
+    "prisma/migrations/"
+  ]
+}

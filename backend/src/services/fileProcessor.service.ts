@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
-import * as docx from 'docx';
+
 
 export class FileProcessorService {
   /**

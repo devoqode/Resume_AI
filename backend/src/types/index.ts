@@ -1,16 +1,13 @@
 import { Request } from 'express';
-import { JwtPayload } from 'jsonwebtoken';
-
-// Import Multer types for file uploads
-import 'multer';
+import { File } from 'multer';
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
   body: any;
   params: any;
   query: any;
-  file?: Express.Multer.File;
-  files?: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
+  file?: File;
+  files?: { [fieldname: string]: File[] } | File[];
   headers: any;
 }
 
@@ -155,7 +152,7 @@ export interface SubmitResponseRequest {
   sessionId: string;
   questionId: string;
   responseText: string;
-  audioFile?: Express.Multer.File;
+  audioFile?: File;
 }
 
 export interface SubmitResponseResponse {
@@ -189,7 +186,7 @@ export interface TTSRequest {
 }
 
 export interface STTRequest {
-  audioFile: Express.Multer.File;
+  audioFile: File;
 }
 
 export interface STTResponse {
