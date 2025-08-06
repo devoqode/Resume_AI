@@ -39,7 +39,8 @@ import {
   MoreVertical,
   Calendar,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Play
 } from "lucide-react";
 import {
   DropdownMenu,
