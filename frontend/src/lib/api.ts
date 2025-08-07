@@ -56,6 +56,9 @@ export interface WorkExperience {
   skills: string[];
   startDate?: string;
   endDate?: string;
+  software?: string[];
+  aiSuggestedSkills?: string[];
+  aiSuggestedSoftware?: string[];
 }
 
 export interface Education {

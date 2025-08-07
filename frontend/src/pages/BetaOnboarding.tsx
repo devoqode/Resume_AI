@@ -63,8 +63,9 @@ export default function BetaOnboarding() {
   const [showWorkStyleDialog, setShowWorkStyleDialog] = useState(false);
   const [sortColumn, setSortColumn] = useState<'years' | 'lastUsed' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [isInitialized, setIsInitialized] = useState(false);
   const { user } = useAuth();
-  const { data: resumes } = useResumes(user?.id || '');
+  const { data: resumes, isLoading: resumesLoading } = useResumes(user?.id || '');
   const [data, setData] = useState<OnboardingData>({
     personalInfo: {
       firstName: "",
@@ -97,6 +98,43 @@ export default function BetaOnboarding() {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Initialize component based on existing resumes
+  useEffect(() => {
+    if (!resumesLoading && resumes && !isInitialized) {
+      setIsInitialized(true);
+      
+      if (resumes.length > 0) {
+        // User has uploaded resume(s) - use the most recent one
+        const latestResume = resumes[0];
+        
+        // Pre-fill data from the latest resume
+        setData(prev => ({
+          ...prev,
+          uploadedResume: latestResume,
+          personalInfo: {
+            ...prev.personalInfo,
+            firstName: latestResume.parsedData?.personalInfo?.name?.split(' ')[0] || prev.personalInfo.firstName,
+            lastName: latestResume.parsedData?.personalInfo?.name?.split(' ').slice(1).join(' ') || prev.personalInfo.lastName,
+            email: latestResume.parsedData?.personalInfo?.email || prev.personalInfo.email,
+            phone: latestResume.parsedData?.personalInfo?.phone || prev.personalInfo.phone,
+          }
+        }));
+
+        // Skip to Experience Enhancement (Step 3)
+        setCurrentStep(3);
+        
+        toast({
+          title: "Resume Found!",
+          description: "We've loaded your existing resume data. You can continue from the Experience Enhancement step.",
+          duration: 5000,
+        });
+      } else {
+        // No resume found - start from Step 1 (Upload)
+        setCurrentStep(1);
+      }
+    }
+  }, [resumes, resumesLoading, isInitialized, toast]);
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
@@ -239,6 +277,21 @@ export default function BetaOnboarding() {
       return 0;
     });
   };
+
+  // Show loading state while checking for existing resumes
+  if (resumesLoading || !isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Initializing Beta Onboarding</h2>
+            <p className="text-muted-foreground">Checking for existing resume data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getSortIcon = (column: 'years' | 'lastUsed') => {
     if (sortColumn !== column) {
@@ -540,6 +593,16 @@ export default function BetaOnboarding() {
               <p className="text-muted-foreground">
                 Experience the future of resume processing with AI-powered skills extraction, contextual job analysis, and intelligent career insights.
               </p>
+              {resumes && resumes.length > 0 && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mt-4">
+                  <p className="text-sm text-primary font-medium">
+                    ✅ Resume data loaded from: <strong>{resumes[0].filename}</strong>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Want to upload a different resume? You can navigate back to Step 1.
+                  </p>
+                </div>
+              )}
             </div>
             
             <div className="space-y-4">
