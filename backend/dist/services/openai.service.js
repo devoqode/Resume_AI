@@ -10,6 +10,18 @@ class OpenAIService {
         this.openai = new openai_1.default({ apiKey });
     }
     /**
+     * Clean OpenAI response by removing markdown code blocks if present
+     */
+    cleanJsonResponse(content) {
+        // Remove markdown code blocks (```json or ```)
+        const cleaned = content
+            .replace(/^```json\s*/i, '')
+            .replace(/^```\s*/, '')
+            .replace(/\s*```$/, '')
+            .trim();
+        return cleaned;
+    }
+    /**
      * Parse resume text and extract structured data
      */
     async parseResumeText(resumeText) {
@@ -71,11 +83,12 @@ Only return the JSON object, no additional text.
             }
             // Parse JSON response
             try {
-                const parsedData = JSON.parse(content);
+                const cleanedContent = this.cleanJsonResponse(content);
+                const parsedData = JSON.parse(cleanedContent);
                 return parsedData;
             }
             catch (parseError) {
-                throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}`);
+                throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}. Raw content: ${content}`);
             }
         }
         catch (error) {
@@ -133,7 +146,8 @@ Only return the JSON array, no additional text.
                 throw new Error('No response from OpenAI');
             }
             try {
-                const questions = JSON.parse(content);
+                const cleanedContent = this.cleanJsonResponse(content);
+                const questions = JSON.parse(cleanedContent);
                 // Validate and format questions
                 return questions.map((q, index) => ({
                     id: '', // Will be set when saving to database
@@ -145,7 +159,7 @@ Only return the JSON array, no additional text.
                 }));
             }
             catch (parseError) {
-                throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}`);
+                throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}. Raw content: ${content}`);
             }
         }
         catch (error) {
@@ -210,11 +224,12 @@ Only return the JSON object, no additional text.
                 throw new Error('No response from OpenAI');
             }
             try {
-                const evaluation = JSON.parse(content);
+                const cleanedContent = this.cleanJsonResponse(content);
+                const evaluation = JSON.parse(cleanedContent);
                 return evaluation;
             }
             catch (parseError) {
-                throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}`);
+                throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}. Raw content: ${content}`);
             }
         }
         catch (error) {
@@ -263,11 +278,12 @@ Only return the JSON object, no additional text.
                 throw new Error('No response from OpenAI');
             }
             try {
-                const overallFeedback = JSON.parse(content);
+                const cleanedContent = this.cleanJsonResponse(content);
+                const overallFeedback = JSON.parse(cleanedContent);
                 return overallFeedback;
             }
             catch (parseError) {
-                throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}`);
+                throw new Error(`Failed to parse OpenAI response as JSON: ${parseError}. Raw content: ${content}`);
             }
         }
         catch (error) {
