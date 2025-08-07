@@ -9,12 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mic, MicOff, Play, Pause, Volume2, RotateCcw } from "lucide-react";
+import { Mic, MicOff, Play, Pause, Volume2, RotateCcw, Brain, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGenerateTechnicalQuestions } from "@/hooks/useApi";
 
 interface WorkStyleInterviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  workExperience?: any[];
 }
 
 const INTERVIEW_QUESTIONS = [
@@ -44,7 +46,7 @@ const INTERVIEW_QUESTIONS = [
   }
 ];
 
-export default function WorkStyleInterviewDialog({ isOpen, onClose }: WorkStyleInterviewDialogProps) {
+export default function WorkStyleInterviewDialog({ isOpen, onClose, workExperience = [] }: WorkStyleInterviewDialogProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -52,9 +54,39 @@ export default function WorkStyleInterviewDialog({ isOpen, onClose }: WorkStyleI
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [allQuestions, setAllQuestions] = useState(INTERVIEW_QUESTIONS);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   
-  const currentQuestion = INTERVIEW_QUESTIONS[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === INTERVIEW_QUESTIONS.length - 1;
+  const generateTechnicalQuestions = useGenerateTechnicalQuestions();
+  
+  const currentQuestion = allQuestions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === allQuestions.length - 1;
+
+  // Generate technical questions when dialog opens if work experience is available
+  useEffect(() => {
+    if (isOpen && workExperience.length > 0 && allQuestions.length === INTERVIEW_QUESTIONS.length) {
+      setIsLoadingQuestions(true);
+      generateTechnicalQuestions.mutate(workExperience, {
+        onSuccess: (response) => {
+          if (response.success && response.data) {
+            // Convert backend questions to match our interface
+            const technicalQuestions = response.data.map((q, index) => ({
+              id: INTERVIEW_QUESTIONS.length + index + 1,
+              question: q.questionText,
+              category: "Technical Experience",
+              suggestions: [] // Technical questions don't need quick selections
+            }));
+            
+            setAllQuestions([...INTERVIEW_QUESTIONS, ...technicalQuestions]);
+          }
+          setIsLoadingQuestions(false);
+        },
+        onError: () => {
+          setIsLoadingQuestions(false);
+        }
+      });
+    }
+  }, [isOpen, workExperience]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -159,6 +191,8 @@ export default function WorkStyleInterviewDialog({ isOpen, onClose }: WorkStyleI
     setCurrentQuestionIndex(0);
     setResponses({});
     setAudioChunks([]);
+    setAllQuestions(INTERVIEW_QUESTIONS); // Reset to original questions
+    setIsLoadingQuestions(false);
     onClose();
   };
 
@@ -169,13 +203,28 @@ export default function WorkStyleInterviewDialog({ isOpen, onClose }: WorkStyleI
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            Work Style Interview
+            {isLoadingQuestions ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating Personalized Questions
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {currentQuestion?.category === "Technical Experience" ? (
+                  <Brain className="w-4 h-4" />
+                ) : null}
+                Enhanced Interview
+              </div>
+            )}
             <Badge variant="secondary">
-              {currentQuestionIndex + 1} of {INTERVIEW_QUESTIONS.length}
+              {currentQuestionIndex + 1} of {allQuestions.length}
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Answer questions about your work preferences and career goals
+            {isLoadingQuestions 
+              ? "AI is creating personalized technical questions based on your experience..."
+              : "Answer work style questions and personalized technical questions based on your resume"
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -184,7 +233,7 @@ export default function WorkStyleInterviewDialog({ isOpen, onClose }: WorkStyleI
           <div className="w-full bg-muted rounded-full h-2">
             <div 
               className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentQuestionIndex + 1) / INTERVIEW_QUESTIONS.length) * 100}%` }}
+              style={{ width: `${((currentQuestionIndex + 1) / allQuestions.length) * 100}%` }}
             />
           </div>
 

@@ -488,3 +488,26 @@ export const useUserStats = (userId: string) => {
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 };
+
+// Generate personalized technical questions based on work experience
+export const useGenerateTechnicalQuestions = () => {
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (workExperience: any[]) => {
+      const response = await interviewAPI.generateQuestions({
+        workExperience: workExperience,
+        questionType: 'technical'
+      });
+      return response;
+    },
+    onError: (error) => {
+      console.error('Error generating technical questions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate personalized questions. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+};

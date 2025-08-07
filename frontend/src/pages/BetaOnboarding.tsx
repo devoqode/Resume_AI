@@ -172,20 +172,46 @@ export default function BetaOnboarding() {
     }));
   };
 
-  // Skills data for the table
-  const skillsData = [
-    { name: "Agile Development", type: "skill", years: 1.7, lastUsed: "2020" },
-    { name: "ASP.NET", type: "software", years: 1.3, lastUsed: "2020" },
-    { name: "AWS Cloud Platform", type: "software", years: 1.5, lastUsed: "2024" },
-    { name: "C# .NET", type: "software", years: 1.5, lastUsed: "2020" },
-    { name: "C++", type: "skill", years: 0.7, lastUsed: "Current" },
-    { name: "Confluence Documentation Tool", type: "software", years: 1.5, lastUsed: "2022" },
-    { name: "Cross-functional Leadership", type: "skill", years: 1.5, lastUsed: "2022" },
-    { name: "Data Analysis", type: "skill", years: 1.5, lastUsed: "2022" },
-    { name: "DO-178C Standards", type: "skill", years: 0.5, lastUsed: "Current" },
-    { name: "Docker Software", type: "software", years: 1, lastUsed: "2024" },
-    { name: "Embedded Systems", type: "skill", years: 0.7, lastUsed: "Current" },
-  ];
+  // Extract skills data from user's resume
+  const extractSkillsData = () => {
+    if (!data.uploadedResume?.parsedData) return [];
+    
+    const skills: Array<{ name: string; type: 'skill' | 'software'; years: number; lastUsed: string }> = [];
+    
+    // Add skills from resume
+    if (data.uploadedResume.parsedData.skills) {
+      data.uploadedResume.parsedData.skills.forEach(skill => {
+        skills.push({
+          name: skill,
+          type: 'skill',
+          years: Math.random() * 5 + 0.5, // Placeholder - could be enhanced with AI analysis
+          lastUsed: 'Current'
+        });
+      });
+    }
+    
+    // Add software/tools from work experience
+    if (data.uploadedResume.parsedData.workExperience) {
+      data.uploadedResume.parsedData.workExperience.forEach(job => {
+        if (job.software) {
+          job.software.forEach(software => {
+            if (!skills.find(s => s.name === software)) {
+              skills.push({
+                name: software,
+                type: 'software',
+                years: Math.random() * 3 + 0.5,
+                lastUsed: job.duration?.includes('Present') ? 'Current' : job.duration?.split('-')[1]?.trim() || 'Unknown'
+              });
+            }
+          });
+        }
+      });
+    }
+    
+    return skills;
+  };
+
+  const skillsData = extractSkillsData();
 
   const handleSort = (column: 'years' | 'lastUsed') => {
     if (sortColumn === column) {
@@ -524,59 +550,34 @@ export default function BetaOnboarding() {
 
               {/* Experience Cards */}
               <div className="space-y-4">
-                {[
-                  {
-                    title: "Senior Software Engineer",
-                    company: "AeroSpace Dynamics",
-                    duration: "2024 - Present",
-                    location: "Denver, CO",
-                    description: "Leading development of mission-critical flight control software systems for commercial and military aircraft. Architecting real-time embedded systems using C++ and Python for avionics platforms. Implementing safety-critical software following DO-178C aviation standards and conducting comprehensive testing protocols. Collaborating with systems engineers and hardware teams to integrate software with flight hardware. Managing technical documentation and regulatory compliance for FAA certification processes.",
-                    skills: ["C++", "Python", "Embedded Systems", "Real-time Systems", "DO-178C Standards", "MATLAB", "Linux Operating System"],
-                    software: ["Git Version Control Tool", "AI Suggested Software", "Excel", "PowerPoint", "Slack", "Trello", "Asana", "Monday.com", "Tableau", "Power BI", "Salesforce", "HubSpot", "Zoom", "Teams"],
-                    aiSuggestedSkills: ["Leadership", "Communication", "Problem Solving", "Team Collaboration", "Strategic Planning", "Project Management", "Data Analysis", "Quality Assurance", "Budget Management", "Risk Management", "Change Management", "Training"],
-                    aiSuggestedSoftware: []
-                  },
-                  {
-                    title: "Senior Software Engineer",
-                    company: "TechCorp Inc.",
-                    duration: "2022 - 2024",
-                    location: "San Francisco, CA",
-                    description: "Developed scalable web applications using modern JavaScript frameworks and cloud technologies. Led a team of 5 engineers in delivering high-quality software solutions. Implemented microservices architecture and improved system performance by 40%.",
-                    skills: ["JavaScript", "React", "Node.js", "AWS", "Docker", "Kubernetes", "TypeScript"],
-                    software: ["Git", "Jira", "Slack", "VS Code", "Docker Desktop", "AWS Console"],
-                    aiSuggestedSkills: ["Team Leadership", "Agile Methodology", "System Design"],
-                    aiSuggestedSoftware: ["Jenkins", "Terraform", "New Relic"]
-                  },
-                  {
-                    title: "Product Manager",
-                    company: "StartupX",
-                    duration: "2020 - 2022",
-                    location: "Austin, TX",
-                    description: "Managed product roadmap and strategy for B2B SaaS platform. Collaborated with cross-functional teams to define requirements and prioritize features. Increased user engagement by 60% through data-driven product decisions.",
-                    skills: ["Product Strategy", "Data Analysis", "User Research", "Agile", "Scrum"],
-                    software: ["Figma", "Mixpanel", "Amplitude", "Notion", "Slack"],
-                    aiSuggestedSkills: ["Market Research", "Competitive Analysis", "Stakeholder Management"],
-                    aiSuggestedSoftware: ["ProductBoard", "Miro", "Confluence"]
-                  },
-                  {
-                    title: "Software Developer",
-                    company: "SecureLife Insurance",
-                    duration: "2018 - 2020",
-                    location: "Chicago, IL",
-                    description: "Built and maintained insurance management systems using Java and Spring framework. Developed RESTful APIs and integrated with third-party services. Improved application security and implemented automated testing.",
-                    skills: ["Java", "Spring Framework", "SQL", "REST APIs", "JUnit"],
-                    software: ["IntelliJ IDEA", "Maven", "Jenkins", "Oracle Database"],
-                    aiSuggestedSkills: ["Software Architecture", "Database Design", "API Design"],
-                    aiSuggestedSoftware: ["SonarQube", "Postman", "Swagger"]
-                  }
-                ].map((job, index) => (
-                  <ExperienceCard
-                    key={index}
-                    job={job}
-                    isExpanded={expandedCard === index}
-                    onToggle={() => setExpandedCard(expandedCard === index ? null : index)}
-                  />
-                ))}
+                {data.uploadedResume?.parsedData?.workExperience && data.uploadedResume.parsedData.workExperience.length > 0 ? (
+                  data.uploadedResume.parsedData.workExperience.map((job, index) => (
+                    <ExperienceCard
+                      key={index}
+                      job={{
+                        title: job.title || "Position",
+                        company: job.company || "Company",
+                        duration: job.duration || "Duration",
+                        location: job.location || "",
+                        description: job.description || "No description available",
+                        skills: job.skills || [],
+                        software: job.software || [],
+                        aiSuggestedSkills: job.aiSuggestedSkills || [],
+                        aiSuggestedSoftware: job.aiSuggestedSoftware || []
+                      }}
+                      isExpanded={expandedCard === index}
+                      onToggle={() => setExpandedCard(expandedCard === index ? null : index)}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No work experience found in your resume.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Upload a resume in Step 1 to see your experience automatically extracted here.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -622,6 +623,7 @@ export default function BetaOnboarding() {
             <WorkStyleInterviewDialog 
               isOpen={showWorkStyleDialog}
               onClose={() => setShowWorkStyleDialog(false)}
+              workExperience={data.uploadedResume?.parsedData?.workExperience || []}
             />
           </div>
         );

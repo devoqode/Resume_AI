@@ -365,6 +365,13 @@ export const interviewAPI = {
   async delete(sessionId: string): Promise<ApiResponse<{ message: string }>> {
     return apiClient.delete<{ message: string }>(`/api/interview/${sessionId}`);
   },
+
+  async generateQuestions(data: {
+    workExperience: any[];
+    questionType?: 'technical' | 'behavioral' | 'all';
+  }): Promise<ApiResponse<InterviewQuestion[]>> {
+    return apiClient.post<InterviewQuestion[]>('/api/interview/generate-questions', data);
+  },
 };
 
 // Voice API
