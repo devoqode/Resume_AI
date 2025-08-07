@@ -20,6 +20,14 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    rollupOptions: {
+      external: [],
+      output: {
+        format: 'es'
+      }
+    },
+    target: 'esnext',
+    minify: 'esbuild',
     chunkSizeWarningLimit: 1000
   }
 }));
