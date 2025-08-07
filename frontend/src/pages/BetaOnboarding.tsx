@@ -674,7 +674,10 @@ export default function BetaOnboarding() {
                 </div>
                 
                 <Button 
-                  onClick={() => setShowWorkStyleDialog(true)}
+                  onClick={() => {
+                    console.log('Start Interview button clicked');
+                    setShowWorkStyleDialog(true);
+                  }}
                   className="w-full bg-gradient-primary hover:opacity-90"
                   size="lg"
                 >
