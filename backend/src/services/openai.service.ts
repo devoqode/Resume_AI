@@ -10,6 +10,14 @@ export class OpenAIService {
   private openai: OpenAI;
 
   constructor(apiKey: string) {
+    if (!apiKey) {
+      throw new Error('OpenAI API key is required');
+    }
+    
+    if (apiKey === 'test-key-for-development') {
+      console.warn('OpenAI service initialized with development placeholder - API calls will fail');
+    }
+    
     this.openai = new OpenAI({ apiKey });
   }
 

@@ -31,8 +31,12 @@ export const config = {
   // OpenAI Configuration
   openai: {
     apiKey: process.env.OPENAI_API_KEY || (() => {
-      console.error('WARNING: OPENAI_API_KEY environment variable is not set');
-      return null;
+      if (process.env.NODE_ENV === 'production') {
+        console.error('FATAL: OPENAI_API_KEY environment variable is required in production');
+        process.exit(1);
+      }
+      console.warn('WARNING: OPENAI_API_KEY environment variable is not set');
+      return 'test-key-for-development';
     })(),
     model: process.env.OPENAI_MODEL || 'gpt-4o',
   },
@@ -40,8 +44,12 @@ export const config = {
   // ElevenLabs Configuration
   elevenlabs: {
     apiKey: process.env.ELEVENLABS_API_KEY || (() => {
-      console.error('WARNING: ELEVENLABS_API_KEY environment variable is not set');
-      return null;
+      if (process.env.NODE_ENV === 'production') {
+        console.error('FATAL: ELEVENLABS_API_KEY environment variable is required in production');
+        process.exit(1);
+      }
+      console.warn('WARNING: ELEVENLABS_API_KEY environment variable is not set');
+      return 'test-key-for-development';
     })(),
     voiceId: process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB', // Default Adam voice
   },

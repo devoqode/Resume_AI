@@ -11,6 +11,9 @@ export class ResumeController {
   private fileProcessor: FileProcessorService;
 
   constructor(openaiApiKey: string) {
+    if (!openaiApiKey || openaiApiKey === 'test-key-for-development') {
+      console.warn('OpenAI API key not properly configured - resume parsing may fail');
+    }
     this.openaiService = new OpenAIService(openaiApiKey);
     this.fileProcessor = new FileProcessorService();
   }
