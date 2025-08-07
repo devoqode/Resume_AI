@@ -14,7 +14,7 @@ export class ElevenLabsService {
   }
 
   /**
-   * Convert text to speech and return audio buffer
+   * Convert text to speech and return audio buffer with fallback support
    */
   async textToSpeech(
     text: string,
@@ -59,8 +59,47 @@ export class ElevenLabsService {
       return buffer;
     } catch (error) {
       console.error('Error in text-to-speech conversion:', error);
+      
+      // Check if it's an authentication/free tier issue
+      if (error instanceof Error && (
+        error.message.includes('detected_unusual_activity') ||
+        error.message.includes('Status code: 401') ||
+        error.message.includes('Free Tier usage disabled')
+      )) {
+        console.log('ElevenLabs free tier disabled, falling back to OpenAI TTS');
+        return await this.fallbackToOpenAITTS(text);
+      }
+      
       throw new Error(
         `TTS conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Fallback TTS using OpenAI when ElevenLabs fails
+   */
+  private async fallbackToOpenAITTS(text: string): Promise<Buffer> {
+    try {
+      // Import OpenAI dynamically
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+
+      const mp3 = await openai.audio.speech.create({
+        model: 'tts-1',
+        voice: 'alloy',
+        input: text,
+      });
+
+      const buffer = Buffer.from(await mp3.arrayBuffer());
+      console.log('Successfully generated audio using OpenAI TTS fallback');
+      return buffer;
+    } catch (fallbackError) {
+      console.error('OpenAI TTS fallback also failed:', fallbackError);
+      throw new Error(
+        `Both ElevenLabs and OpenAI TTS failed. ElevenLabs may require a paid subscription for production use.`
       );
     }
   }
