@@ -104,5 +104,11 @@ export const createInterviewRoutes = (
     interviewController.deleteSession.bind(interviewController)
   );
 
+  // Generate personalized questions based on work experience
+  router.post(
+    '/generate-questions',
+    interviewController.generateQuestions.bind(interviewController)
+  );
+
   return router;
 };
