@@ -22,31 +22,10 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Keep React together to avoid hook issues
-          if (id.includes('react') || id.includes('react-dom')) {
-            return 'react-vendor';
-          }
-          // Group Radix UI components
-          if (id.includes('@radix-ui')) {
-            return 'ui-vendor';
-          }
-          // Group form libraries
-          if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
-            return 'form-vendor';
-          }
-          // Group query libraries
-          if (id.includes('@tanstack/react-query')) {
-            return 'query-vendor';
-          }
-          // Group chart libraries
-          if (id.includes('recharts')) {
-            return 'chart-vendor';
-          }
-          // Group other UI libraries
-          if (id.includes('lucide-react') || id.includes('class-variance-authority') || id.includes('clsx')) {
-            return 'ui-utils-vendor';
-          }
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs', '@radix-ui/react-select', 'lucide-react'],
+          'utils': ['@tanstack/react-query', 'react-hook-form', '@hookform/resolvers', 'zod']
         }
       }
     },
