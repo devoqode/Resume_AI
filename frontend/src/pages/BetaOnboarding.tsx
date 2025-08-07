@@ -5,6 +5,7 @@ import FileUpload from "@/components/FileUpload";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
 import ExperienceCard from "@/components/ExperienceCard";
+import WorkStyleInterviewDialog from "@/components/WorkStyleInterviewDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,7 +24,8 @@ import type { Resume } from "@/lib/api";
 const TOTAL_STEPS = 5;
 
 interface OnboardingData {
-  resume?: File;
+  resumeFile?: File;
+  uploadedResume?: Resume;
   voiceRecording?: Blob;
   personalInfo: {
     firstName: string;
@@ -120,7 +122,7 @@ export default function BetaOnboarding() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return !!data.resume;
+        return !!data.uploadedResume;
       case 2:
         return data.personalInfo.firstName && data.personalInfo.lastName && data.personalInfo.email;
       case 3:
@@ -240,13 +242,13 @@ export default function BetaOnboarding() {
               onUploadComplete={(resume) => {
                 setData(prev => ({ 
                   ...prev, 
-                  resume,
+                  uploadedResume: resume,
                   personalInfo: {
                     ...prev.personalInfo,
-                    firstName: resume.parsedData?.name?.split(' ')[0] || prev.personalInfo.firstName,
-                    lastName: resume.parsedData?.name?.split(' ').slice(1).join(' ') || prev.personalInfo.lastName,
-                    email: resume.parsedData?.email || prev.personalInfo.email,
-                    phone: resume.parsedData?.phone || prev.personalInfo.phone,
+                    firstName: resume.parsedData?.personalInfo?.name?.split(' ')[0] || prev.personalInfo.firstName,
+                    lastName: resume.parsedData?.personalInfo?.name?.split(' ').slice(1).join(' ') || prev.personalInfo.lastName,
+                    email: resume.parsedData?.personalInfo?.email || prev.personalInfo.email,
+                    phone: resume.parsedData?.personalInfo?.phone || prev.personalInfo.phone,
                   }
                 }));
                 toast({

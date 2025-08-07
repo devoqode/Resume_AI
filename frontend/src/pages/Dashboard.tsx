@@ -40,7 +40,8 @@ import {
   Calendar,
   LogOut,
   ChevronRight,
-  Play
+  Play,
+  Sparkles
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -211,7 +212,7 @@ export default function Dashboard() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* Quick Actions */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
               <Card className="p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 rounded-lg bg-primary/10">
@@ -257,6 +258,28 @@ export default function Dashboard() {
                 >
                   <Play className="w-4 h-4 mr-2" />
                   Start Practice
+                </Button>
+              </Card>
+
+              <Card className="p-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Sparkles className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Beta Onboarding</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Complete 5-step profile setup with AI
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => navigate('/beta-onboarding')}
+                  variant="outline"
+                  className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Start Onboarding
                 </Button>
               </Card>
             </div>
