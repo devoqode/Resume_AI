@@ -22,22 +22,31 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu', 
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-select',
-            '@radix-ui/react-accordion',
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-slot',
-            'lucide-react'
-          ],
-          'query-vendor': ['@tanstack/react-query'],
-          'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          'chart-vendor': ['recharts'],
+        manualChunks: (id) => {
+          // Keep React together to avoid hook issues
+          if (id.includes('react') || id.includes('react-dom')) {
+            return 'react-vendor';
+          }
+          // Group Radix UI components
+          if (id.includes('@radix-ui')) {
+            return 'ui-vendor';
+          }
+          // Group form libraries
+          if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+            return 'form-vendor';
+          }
+          // Group query libraries
+          if (id.includes('@tanstack/react-query')) {
+            return 'query-vendor';
+          }
+          // Group chart libraries
+          if (id.includes('recharts')) {
+            return 'chart-vendor';
+          }
+          // Group other UI libraries
+          if (id.includes('lucide-react') || id.includes('class-variance-authority') || id.includes('clsx')) {
+            return 'ui-utils-vendor';
+          }
         }
       }
     },
