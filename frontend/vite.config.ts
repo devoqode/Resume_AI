@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => ({
             '@radix-ui/react-select',
             '@radix-ui/react-accordion',
             '@radix-ui/react-avatar',
-            '@radix-ui/react-button',
+            '@radix-ui/react-slot',
             'lucide-react'
           ],
           'query-vendor': ['@tanstack/react-query'],
