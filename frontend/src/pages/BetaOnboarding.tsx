@@ -630,6 +630,7 @@ export default function BetaOnboarding() {
                       }}
                       isExpanded={expandedCard === index}
                       onToggle={() => setExpandedCard(expandedCard === index ? null : index)}
+                      resume={data.uploadedResume}
                     />
                   ))
                 ) : (

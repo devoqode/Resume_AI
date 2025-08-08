@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Briefcase, ChevronDown, ChevronUp, Calendar, MapPin, Plus, X } from "lucide-react";
 import AIInterviewDialog from "./AIInterviewDialog";
+import type { Resume } from "@/lib/api";
 
 interface Job {
   title: string;
@@ -24,9 +25,10 @@ interface ExperienceCardProps {
   isExpanded: boolean;
   onToggle: () => void;
   onJobUpdate?: (updatedJob: Job) => void;
+  resume?: Resume;
 }
 
-export default function ExperienceCard({ job, isExpanded, onToggle, onJobUpdate }: ExperienceCardProps) {
+export default function ExperienceCard({ job, isExpanded, onToggle, onJobUpdate, resume }: ExperienceCardProps) {
   const [localJob, setLocalJob] = useState(job);
   const [skillsToAdd, setSkillsToAdd] = useState({
     skills: '',
@@ -272,9 +274,9 @@ export default function ExperienceCard({ job, isExpanded, onToggle, onJobUpdate 
       </div>
       
       <AIInterviewDialog 
-        isOpen={showInterviewDialog}
-        onClose={() => setShowInterviewDialog(false)}
-        job={localJob}
+        open={showInterviewDialog}
+        onOpenChange={setShowInterviewDialog}
+        resume={resume}
       />
     </Card>
   );
