@@ -389,7 +389,6 @@ interface SpeechRecognitionErrorEvent {
 export const useRealTimeTranscript = () => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [shouldRestart, setShouldRestart] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
 
@@ -429,18 +428,8 @@ export const useRealTimeTranscript = () => {
       };
 
       recognitionInstance.onend = () => {
+        console.log('Speech recognition ended');
         setIsListening(false);
-        // Auto-restart if we were listening and want to continue
-        if (shouldRestart) {
-          setTimeout(() => {
-            try {
-              recognitionInstance.start();
-            } catch (error) {
-              console.log('Could not restart recognition:', error);
-              setShouldRestart(false);
-            }
-          }, 100);
-        }
       };
 
       recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -474,8 +463,8 @@ export const useRealTimeTranscript = () => {
 
   const startListening = () => {
     if (recognitionRef.current && !isListening) {
+      console.log('Starting speech recognition');
       setTranscript('');
-      setShouldRestart(true);
       try {
         recognitionRef.current.start();
       } catch (error) {
@@ -485,8 +474,8 @@ export const useRealTimeTranscript = () => {
   };
 
   const stopListening = () => {
-    setShouldRestart(false);
     if (recognitionRef.current && isListening) {
+      console.log('Stopping speech recognition');
       recognitionRef.current.stop();
     }
   };

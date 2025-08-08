@@ -281,35 +281,62 @@ export default function AIInterviewDialog({
 
   // Complete interview and submit all responses
   const handleCompleteInterview = async () => {
+    console.log('Complete Interview clicked');
+    console.log('sessionId:', sessionId);
+    console.log('sessionData:', sessionData);
+    console.log('current responses:', responses);
+    console.log('current transcript:', transcript);
+    
     // Save current response if there is one
+    let updatedResponses = { ...responses };
     if (transcript.trim()) {
-      setResponses(prev => ({
-        ...prev,
+      updatedResponses = {
+        ...responses,
         [currentQuestionIndex]: transcript.trim()
-      }));
+      };
+      setResponses(updatedResponses);
     }
 
-    if (!sessionId || !sessionData || Object.keys(responses).length === 0) return;
+    if (!sessionId || !sessionData) {
+      console.error('Missing sessionId or sessionData');
+      return;
+    }
 
+    if (Object.keys(updatedResponses).length === 0 && !transcript.trim()) {
+      console.error('No responses to submit');
+      return;
+    }
+
+    console.log('Starting interview completion...');
     setStage('processing');
     
     try {
       // Submit each response individually to the backend for evaluation
       for (let i = 0; i < sessionData.questions.length; i++) {
-        const response = responses[i] || transcript.trim(); // Use current transcript if on current question
+        const response = updatedResponses[i] || (i === currentQuestionIndex ? transcript.trim() : '');
         if (response) {
+          console.log(`Submitting response for question ${i}:`, response);
           const question = sessionData.questions[i];
           await submitResponse.mutateAsync({
             sessionId,
             questionId: question.id,
             transcription: response
           });
+        } else {
+          console.warn(`No response for question ${i}`);
         }
       }
       
+      console.log('Completing interview session...');
       // Complete the interview session
       await completeInterview.mutateAsync(sessionId);
+      console.log('Interview completed successfully');
       setStage('completed');
+      
+      // Auto-close dialog after a brief delay to show completion
+      setTimeout(() => {
+        handleClose();
+      }, 2000);
     } catch (error) {
       console.error('Failed to complete interview:', error);
       setStage('recording'); // Return to recording stage on error
@@ -323,40 +350,9 @@ export default function AIInterviewDialog({
     startListening();
   };
 
-  // Stop recording and submit response
-  const handleStopRecording = async () => {
+  // Stop recording (no longer submits automatically)
+  const handleStopRecording = () => {
     stopListening();
-    
-    if (!sessionId || !session || !transcript.trim()) return;
-
-    setStage('processing');
-    
-    const currentQuestion = session.questions[currentQuestionIndex];
-    
-    submitResponse.mutate({
-      sessionId,
-      questionId: currentQuestion.id,
-      transcription: transcript.trim()
-    }, {
-      onSuccess: () => {
-        // Move to next question or complete
-        const nextIndex = currentQuestionIndex + 1;
-        if (nextIndex < session.totalQuestions) {
-          setCurrentQuestionIndex(nextIndex);
-          setStage('recording');
-          setTimeElapsed(0);
-          // Generate speech for next question
-          generateFirstQuestionSpeech(session.questions[nextIndex].questionText);
-        } else {
-          // Interview complete
-          completeInterview.mutate(sessionId, {
-            onSuccess: () => {
-              setStage('completed');
-            }
-          });
-        }
-      }
-    });
   };
 
   // Close dialog and reset
@@ -601,7 +597,7 @@ export default function AIInterviewDialog({
                         <Button
                           onClick={handleCompleteInterview}
                           className="bg-green-500 hover:bg-green-600 text-white"
-                          disabled={Object.keys(responses).length === 0}
+                          disabled={Object.keys(responses).length === 0 && !transcript.trim()}
                         >
                           Complete Interview
                         </Button>
