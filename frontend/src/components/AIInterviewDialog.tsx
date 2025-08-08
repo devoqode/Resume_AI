@@ -45,6 +45,15 @@ export default function AIInterviewDialog({
   resume,
   voiceId = 'pNInz6obpgDQGcFmaJgB' // Default voice
 }: AIInterviewDialogProps) {
+  
+  // Debug logging for props
+  useEffect(() => {
+    console.log('AIInterviewDialog - Props updated:');
+    console.log('- open:', open);
+    console.log('- resume:', resume);
+    console.log('- stage:', stage);
+    console.log('- user:', user);
+  }, [open, resume, stage, user]);
   const [stage, setStage] = useState<InterviewStage>('initial');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -164,7 +173,14 @@ export default function AIInterviewDialog({
 
   // Start interview
   const handleStartInterview = async () => {
-    if (!resume || !user) return;
+    console.log('handleStartInterview called');
+    console.log('- user:', user);
+    console.log('- resume:', resume);
+    
+    if (!resume || !user) {
+      console.log('Cannot start interview: missing resume or user');
+      return;
+    }
 
     startInterview.mutate({
       userId: user.id,

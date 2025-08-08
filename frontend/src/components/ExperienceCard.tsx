@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,11 @@ export default function ExperienceCard({ job, isExpanded, onToggle, onJobUpdate,
     software: ''
   });
   const [showInterviewDialog, setShowInterviewDialog] = useState(false);
+  
+  // Debug logging for dialog state changes
+  useEffect(() => {
+    console.log('ExperienceCard - showInterviewDialog changed to:', showInterviewDialog);
+  }, [showInterviewDialog]);
 
   const updateJob = (updatedJob: Job) => {
     setLocalJob(updatedJob);
@@ -103,7 +108,13 @@ export default function ExperienceCard({ job, isExpanded, onToggle, onJobUpdate,
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button 
               className="bg-gradient-primary hover:opacity-90"
-              onClick={() => setShowInterviewDialog(true)}
+              onClick={() => {
+                console.log('Start AI Interview button clicked!');
+                console.log('Current showInterviewDialog:', showInterviewDialog);
+                console.log('Resume data:', resume);
+                setShowInterviewDialog(true);
+                console.log('After setState - showInterviewDialog should be true');
+              }}
             >
               Start AI Interview
             </Button>
