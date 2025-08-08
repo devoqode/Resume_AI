@@ -48,6 +48,7 @@ export default function AIInterviewDialog({
   const [stage, setStage] = useState<InterviewStage>('initial');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionData, setSessionData] = useState<any>(null); // Store session data directly
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -190,6 +191,7 @@ export default function AIInterviewDialog({
       onSuccess: (response) => {
         if (response.success && response.data) {
           setSessionId(response.data.id);
+          setSessionData(response.data); // Store the session data
           setStage('recording');
           // Generate speech for first question
           generateFirstQuestionSpeech(response.data.questions[0].questionText);
@@ -277,6 +279,7 @@ export default function AIInterviewDialog({
     setStage('initial');
     setCurrentQuestionIndex(0);
     setSessionId(null);
+    setSessionData(null); // Reset session data
     setCurrentAudioUrl(null);
     setAudioPlaying(false);
     setTimeElapsed(0);
@@ -285,9 +288,10 @@ export default function AIInterviewDialog({
     onOpenChange(false);
   };
 
-  // Get current question
-  const currentQuestion = session?.questions[currentQuestionIndex];
-  const progress = session ? ((currentQuestionIndex + 1) / session.totalQuestions) * 100 : 0;
+  // Get current question - use sessionData as fallback if session not loaded yet
+  const currentQuestion = session?.questions[currentQuestionIndex] || sessionData?.questions[currentQuestionIndex];
+  const totalQuestions = session?.totalQuestions || sessionData?.totalQuestions || 0;
+  const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -307,11 +311,11 @@ export default function AIInterviewDialog({
 
         <div className="flex-1 overflow-hidden flex flex-col gap-6">
           {/* Progress */}
-          {session && (
+          {(session || sessionData) && (
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">
-                  Question {currentQuestionIndex + 1} of {session.totalQuestions}
+                  Question {currentQuestionIndex + 1} of {totalQuestions}
                 </span>
                 <Badge variant="outline">
                   {formatTime(timeElapsed)}
