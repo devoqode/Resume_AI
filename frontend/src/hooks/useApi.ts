@@ -389,6 +389,7 @@ interface SpeechRecognitionErrorEvent {
 export const useRealTimeTranscript = () => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [shouldRestart, setShouldRestart] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { toast } = useToast();
 
@@ -401,6 +402,11 @@ export const useRealTimeTranscript = () => {
       recognitionInstance.continuous = true;
       recognitionInstance.interimResults = true;
       recognitionInstance.lang = 'en-US';
+      recognitionInstance.maxAlternatives = 1;
+      // Add service timeout to prevent early stopping
+      if ('webkitSpeechRecognition' in window) {
+        (recognitionInstance as any).serviceURI = 'wss://www.google.com/speech-api/full-duplex/v1/up';
+      }
 
       recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         let interimTranscript = '';
@@ -424,16 +430,31 @@ export const useRealTimeTranscript = () => {
 
       recognitionInstance.onend = () => {
         setIsListening(false);
+        // Auto-restart if we were listening and want to continue
+        if (shouldRestart) {
+          setTimeout(() => {
+            try {
+              recognitionInstance.start();
+            } catch (error) {
+              console.log('Could not restart recognition:', error);
+              setShouldRestart(false);
+            }
+          }, 100);
+        }
       };
 
       recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
-        toast({
-          title: 'Speech Recognition Error',
-          description: 'Failed to capture speech. Please try again.',
-          variant: 'destructive',
-        });
+        
+        // Only show toast for actual errors, not for network or no-speech issues
+        if (event.error !== 'no-speech' && event.error !== 'network') {
+          toast({
+            title: 'Speech Recognition Error',
+            description: `${event.error}. Please try again.`,
+            variant: 'destructive',
+          });
+        }
       };
 
       recognitionRef.current = recognitionInstance;
@@ -454,11 +475,17 @@ export const useRealTimeTranscript = () => {
   const startListening = () => {
     if (recognitionRef.current && !isListening) {
       setTranscript('');
-      recognitionRef.current.start();
+      setShouldRestart(true);
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('Failed to start recognition:', error);
+      }
     }
   };
 
   const stopListening = () => {
+    setShouldRestart(false);
     if (recognitionRef.current && isListening) {
       recognitionRef.current.stop();
     }

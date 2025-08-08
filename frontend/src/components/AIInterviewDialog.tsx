@@ -49,6 +49,7 @@ export default function AIInterviewDialog({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionData, setSessionData] = useState<any>(null); // Store session data directly
+  const [responses, setResponses] = useState<Record<number, string>>({}); // Store responses by question index
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -231,6 +232,90 @@ export default function AIInterviewDialog({
     }
   };
 
+  // Navigate to previous question
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      // Save current response before navigating
+      if (transcript.trim()) {
+        setResponses(prev => ({
+          ...prev,
+          [currentQuestionIndex]: transcript.trim()
+        }));
+      }
+      
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      resetTranscript();
+      setTimeElapsed(0);
+      stopListening();
+    }
+  };
+
+  // Navigate to next question  
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < totalQuestions - 1) {
+      // Save current response before navigating
+      if (transcript.trim()) {
+        setResponses(prev => ({
+          ...prev,
+          [currentQuestionIndex]: transcript.trim()
+        }));
+      }
+      
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      resetTranscript();
+      setTimeElapsed(0);
+      stopListening();
+    }
+  };
+
+  // Save current response without submitting to API
+  const handleSaveResponse = () => {
+    if (transcript.trim()) {
+      setResponses(prev => ({
+        ...prev,
+        [currentQuestionIndex]: transcript.trim()
+      }));
+      resetTranscript();
+    }
+  };
+
+  // Complete interview and submit all responses
+  const handleCompleteInterview = async () => {
+    // Save current response if there is one
+    if (transcript.trim()) {
+      setResponses(prev => ({
+        ...prev,
+        [currentQuestionIndex]: transcript.trim()
+      }));
+    }
+
+    if (!sessionId || !sessionData || Object.keys(responses).length === 0) return;
+
+    setStage('processing');
+    
+    try {
+      // Submit each response individually to the backend for evaluation
+      for (let i = 0; i < sessionData.questions.length; i++) {
+        const response = responses[i] || transcript.trim(); // Use current transcript if on current question
+        if (response) {
+          const question = sessionData.questions[i];
+          await submitResponse.mutateAsync({
+            sessionId,
+            questionId: question.id,
+            transcription: response
+          });
+        }
+      }
+      
+      // Complete the interview session
+      await completeInterview.mutateAsync(sessionId);
+      setStage('completed');
+    } catch (error) {
+      console.error('Failed to complete interview:', error);
+      setStage('recording'); // Return to recording stage on error
+    }
+  };
+
   // Start recording response
   const handleStartRecording = () => {
     resetTranscript();
@@ -280,6 +365,7 @@ export default function AIInterviewDialog({
     setCurrentQuestionIndex(0);
     setSessionId(null);
     setSessionData(null); // Reset session data
+    setResponses({}); // Reset all responses
     setCurrentAudioUrl(null);
     setAudioPlaying(false);
     setTimeElapsed(0);
@@ -438,8 +524,21 @@ export default function AIInterviewDialog({
 
                   {/* Transcript Display */}
                   <ScrollArea className="h-32 border rounded-lg p-4 bg-muted/30">
-                    {transcript ? (
-                      <p className="text-sm leading-relaxed">{transcript}</p>
+                    {(transcript || responses[currentQuestionIndex]) ? (
+                      <div className="space-y-2">
+                        {responses[currentQuestionIndex] && responses[currentQuestionIndex] !== transcript && (
+                          <div className="p-2 bg-blue-50 border-l-4 border-blue-400 rounded">
+                            <p className="text-xs text-blue-600 font-medium mb-1">Previous Response:</p>
+                            <p className="text-sm text-blue-800">{responses[currentQuestionIndex]}</p>
+                          </div>
+                        )}
+                        {transcript && (
+                          <div className={responses[currentQuestionIndex] ? "p-2 bg-green-50 border-l-4 border-green-400 rounded" : ""}>
+                            {responses[currentQuestionIndex] && <p className="text-xs text-green-600 font-medium mb-1">Current Recording:</p>}
+                            <p className="text-sm leading-relaxed">{transcript}</p>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
                         {isListening ? 'Listening... Speak clearly into your microphone.' : 'Click "Start Recording" to begin your response.'}
@@ -450,33 +549,64 @@ export default function AIInterviewDialog({
                   {/* Recording Controls */}
                   <div className="flex gap-3 justify-center">
                     {!isListening ? (
-                      <Button 
-                        onClick={handleStartRecording}
-                        className="bg-red-500 hover:bg-red-600 text-white"
-                        disabled={!speechSupported}
-                      >
-                        <Mic className="w-4 h-4 mr-2" />
-                        Start Recording
-                      </Button>
+                      <>
+                        <Button 
+                          onClick={handleStartRecording}
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                          disabled={!speechSupported}
+                        >
+                          <Mic className="w-4 h-4 mr-2" />
+                          Start Recording
+                        </Button>
+                        
+                        {transcript.trim() && (
+                          <Button 
+                            onClick={handleSaveResponse}
+                            variant="outline"
+                          >
+                            Save Response
+                          </Button>
+                        )}
+                      </>
                     ) : (
                       <Button 
-                        onClick={handleStopRecording}
-                        disabled={!transcript.trim() || submitResponse.isPending}
-                        className="bg-gradient-primary hover:opacity-90"
+                        onClick={stopListening}
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
                       >
-                        {submitResponse.isPending ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <Square className="w-4 h-4 mr-2" />
-                            Submit Answer
-                          </>
-                        )}
+                        <Square className="w-4 h-4 mr-2" />
+                        Stop Recording
                       </Button>
                     )}
+                  </div>
+
+                  {/* Question Navigation */}
+                  <div className="flex gap-3 justify-between mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={handlePreviousQuestion}
+                      disabled={currentQuestionIndex === 0}
+                    >
+                      Previous Question
+                    </Button>
+
+                    <div className="flex gap-2">
+                      {currentQuestionIndex < totalQuestions - 1 ? (
+                        <Button
+                          onClick={handleNextQuestion}
+                          className="bg-gradient-primary hover:opacity-90"
+                        >
+                          Next Question
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleCompleteInterview}
+                          className="bg-green-500 hover:bg-green-600 text-white"
+                          disabled={Object.keys(responses).length === 0}
+                        >
+                          Complete Interview
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
