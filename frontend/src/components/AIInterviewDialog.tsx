@@ -45,15 +45,6 @@ export default function AIInterviewDialog({
   resume,
   voiceId = 'pNInz6obpgDQGcFmaJgB' // Default voice
 }: AIInterviewDialogProps) {
-  
-  // Debug logging for props
-  useEffect(() => {
-    console.log('AIInterviewDialog - Props updated:');
-    console.log('- open:', open);
-    console.log('- resume:', resume);
-    console.log('- stage:', stage);
-    console.log('- user:', user);
-  }, [open, resume, stage, user]);
   const [stage, setStage] = useState<InterviewStage>('initial');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -66,6 +57,15 @@ export default function AIInterviewDialog({
   const timerRef = useRef<NodeJS.Timeout>();
   
   const { user } = useAuth();
+  
+  // Debug logging for props - moved after variable declarations
+  useEffect(() => {
+    console.log('AIInterviewDialog - Props updated:');
+    console.log('- open:', open);
+    console.log('- resume:', resume);
+    console.log('- stage:', stage);
+    console.log('- user:', user);
+  }, [open, resume, stage, user]);
   const startInterview = useStartInterview();
   const submitResponse = useSubmitResponse();
   const completeInterview = useCompleteInterview();
