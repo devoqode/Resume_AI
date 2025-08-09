@@ -66,7 +66,7 @@ export class ElevenLabsService {
         error.message.includes('Status code: 401') ||
         error.message.includes('Free Tier usage disabled')
       )) {
-        console.log('ElevenLabs free tier disabled, falling back to OpenAI TTS');
+        // ElevenLabs free tier disabled, falling back to OpenAI TTS
         return await this.fallbackToOpenAITTS(text);
       }
       
@@ -94,7 +94,7 @@ export class ElevenLabsService {
       });
 
       const buffer = Buffer.from(await mp3.arrayBuffer());
-      console.log('Successfully generated audio using OpenAI TTS fallback');
+      // Successfully generated audio using OpenAI TTS fallback
       return buffer;
     } catch (fallbackError) {
       console.error('OpenAI TTS fallback also failed:', fallbackError);

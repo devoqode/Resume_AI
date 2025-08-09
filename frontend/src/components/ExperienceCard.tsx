@@ -109,11 +109,7 @@ export default function ExperienceCard({ job, isExpanded, onToggle, onJobUpdate,
             <Button 
               className="bg-gradient-primary hover:opacity-90"
               onClick={() => {
-                console.log('Start AI Interview button clicked!');
-                console.log('Current showInterviewDialog:', showInterviewDialog);
-                console.log('Resume data:', resume);
                 setShowInterviewDialog(true);
-                console.log('After setState - showInterviewDialog should be true');
               }}
             >
               Start AI Interview

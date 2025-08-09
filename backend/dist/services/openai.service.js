@@ -7,6 +7,12 @@ exports.OpenAIService = void 0;
 const openai_1 = __importDefault(require("openai"));
 class OpenAIService {
     constructor(apiKey) {
+        if (!apiKey) {
+            throw new Error('OpenAI API key is required');
+        }
+        if (apiKey === 'test-key-for-development') {
+            console.warn('OpenAI service initialized with development placeholder - API calls will fail');
+        }
         this.openai = new openai_1.default({ apiKey });
     }
     /**

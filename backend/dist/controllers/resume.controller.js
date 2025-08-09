@@ -309,6 +309,9 @@ class ResumeController {
                 });
             }
         };
+        if (!openaiApiKey || openaiApiKey === 'test-key-for-development') {
+            console.warn('OpenAI API key not properly configured - resume parsing may fail');
+        }
         this.openaiService = new openai_service_1.OpenAIService(openaiApiKey);
         this.fileProcessor = new fileProcessor_service_1.FileProcessorService();
     }

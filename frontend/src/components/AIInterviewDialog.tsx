@@ -60,13 +60,11 @@ export default function AIInterviewDialog({
   
   const { user } = useAuth();
   
-  // Debug logging for props - moved after variable declarations
+  // Props monitoring for debugging
   useEffect(() => {
-    console.log('AIInterviewDialog - Props updated:');
-    console.log('- open:', open);
-    console.log('- resume:', resume);
-    console.log('- stage:', stage);
-    console.log('- user:', user);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('AIInterviewDialog - Props updated:', { open, resume: !!resume, stage, user: !!user });
+    }
   }, [open, resume, stage, user]);
   const startInterview = useStartInterview();
   const submitResponse = useSubmitResponse();
@@ -175,12 +173,8 @@ export default function AIInterviewDialog({
 
   // Start interview
   const handleStartInterview = async () => {
-    console.log('handleStartInterview called');
-    console.log('- user:', user);
-    console.log('- resume:', resume);
-    
     if (!resume || !user) {
-      console.log('Cannot start interview: missing resume or user');
+      console.error('Cannot start interview: missing resume or user');
       return;
     }
 
@@ -281,11 +275,7 @@ export default function AIInterviewDialog({
 
   // Complete interview and submit all responses
   const handleCompleteInterview = async () => {
-    console.log('Complete Interview clicked');
-    console.log('sessionId:', sessionId);
-    console.log('sessionData:', sessionData);
-    console.log('current responses:', responses);
-    console.log('current transcript:', transcript);
+    // Complete Interview process initiated
     
     // Save current response if there is one
     let updatedResponses = { ...responses };
@@ -307,7 +297,7 @@ export default function AIInterviewDialog({
       return;
     }
 
-    console.log('Starting interview completion...');
+    // Starting interview completion process
     setStage('processing');
     
     try {
@@ -315,7 +305,7 @@ export default function AIInterviewDialog({
       for (let i = 0; i < sessionData.questions.length; i++) {
         const response = updatedResponses[i] || (i === currentQuestionIndex ? transcript.trim() : '');
         if (response) {
-          console.log(`Submitting response for question ${i}:`, response);
+          // Submitting response for question
           const question = sessionData.questions[i];
           await submitResponse.mutateAsync({
             sessionId,
@@ -327,10 +317,9 @@ export default function AIInterviewDialog({
         }
       }
       
-      console.log('Completing interview session...');
-      // Complete the interview session
+      // Completing interview session
       await completeInterview.mutateAsync(sessionId);
-      console.log('Interview completed successfully');
+      // Interview completed successfully
       setStage('completed');
       
       // Auto-close dialog after a brief delay to show completion

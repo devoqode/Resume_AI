@@ -550,7 +550,7 @@ export class InterviewController {
       }
 
       // Generate 5 technical questions based on user's work experience
-      console.log('Generating questions for work experience:', workExperience);
+      // Generate questions for work experience
       
       const generatedQuestions = await this.openaiService.generateInterviewQuestions(workExperience);
       

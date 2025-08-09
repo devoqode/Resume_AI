@@ -61,6 +61,8 @@ const createInterviewRoutes = (openaiApiKey, elevenLabsApiKey, elevenLabsVoiceId
     router.get('/', interviewController.getUserSessions.bind(interviewController)); // For authenticated requests
     // Delete interview session
     router.delete('/:sessionId', interviewController.deleteSession.bind(interviewController));
+    // Generate personalized questions based on work experience
+    router.post('/generate-questions', interviewController.generateQuestions.bind(interviewController));
     return router;
 };
 exports.createInterviewRoutes = createInterviewRoutes;

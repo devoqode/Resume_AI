@@ -432,6 +432,50 @@ class InterviewController {
                 });
             }
         };
+        /**
+         * Generate personalized technical questions based on work experience
+         */
+        this.generateQuestions = async (req, res) => {
+            try {
+                const { workExperience, questionType = 'technical' } = req.body;
+                if (!workExperience || !Array.isArray(workExperience)) {
+                    res.status(400).json({
+                        success: false,
+                        error: 'Work experience array is required',
+                    });
+                    return;
+                }
+                if (workExperience.length === 0) {
+                    res.status(400).json({
+                        success: false,
+                        error: 'At least one work experience entry is required',
+                    });
+                    return;
+                }
+                // Generate 5 technical questions based on user's work experience
+                console.log('Generating questions for work experience:', workExperience);
+                const generatedQuestions = await this.openaiService.generateInterviewQuestions(workExperience);
+                // Format questions for frontend
+                const questions = generatedQuestions.map((q, index) => ({
+                    id: (0, uuid_1.v4)(),
+                    questionText: q.questionText,
+                    questionType: q.questionType,
+                    orderIndex: index + 1,
+                    isRequired: q.isRequired || true,
+                }));
+                res.json({
+                    success: true,
+                    data: questions,
+                });
+            }
+            catch (error) {
+                console.error('Generate questions error:', error);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to generate interview questions',
+                });
+            }
+        };
         this.openaiService = new openai_service_1.OpenAIService(openaiApiKey);
         this.elevenLabsService = new elevenlabs_service_1.ElevenLabsService(elevenLabsApiKey, elevenLabsVoiceId);
         this.whisperService = new whisper_service_1.WhisperService(openaiApiKey);
